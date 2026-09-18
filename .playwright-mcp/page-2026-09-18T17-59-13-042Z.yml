@@ -1,0 +1,153 @@
+- generic [active] [ref=e1]:
+  - complementary [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]: 🗳️
+      - generic [ref=e5]:
+        - heading "বাংলাদেশ ভোটার তথ্য" [level=2] [ref=e6]
+        - paragraph [ref=e7]: Smart Voter System
+    - navigation [ref=e8]:
+      - generic [ref=e9] [cursor=pointer]:
+        - generic [ref=e10]: 🏠
+        - text: ড্যাশবোর্ড
+      - generic [ref=e11] [cursor=pointer]:
+        - generic [ref=e12]: 🗺️
+        - text: জেলা সমূহ
+      - generic [ref=e13] [cursor=pointer]:
+        - generic [ref=e14]: 📍
+        - text: উপজেলা সমূহ
+      - generic [ref=e15] [cursor=pointer]:
+        - generic [ref=e16]: 🏛️
+        - text: কেন্দ্র সমূহ
+      - generic [ref=e17] [cursor=pointer]:
+        - generic [ref=e18]: 🔍
+        - text: ভোটার অনুসন্ধান
+      - generic [ref=e19] [cursor=pointer]:
+        - generic [ref=e20]: 📊
+        - text: রিপোর্ট ও পরিসংখ্যান
+      - generic [ref=e21] [cursor=pointer]:
+        - generic [ref=e22]: 📄
+        - text: PDF ডাউনলোড
+      - generic [ref=e23] [cursor=pointer]:
+        - generic [ref=e24]: 📥
+        - text: ডেটা এক্সপোর্ট
+      - generic [ref=e25] [cursor=pointer]:
+        - generic [ref=e26]: ⚙️
+        - text: সেটিংস
+      - generic [ref=e27] [cursor=pointer]:
+        - generic [ref=e28]: 👤
+        - text: ব্যবহারকারী লগ
+      - generic [ref=e29] [cursor=pointer]:
+        - generic [ref=e30]: ❓
+        - text: সহায়তা
+      - generic [ref=e31] [cursor=pointer]:
+        - generic [ref=e32]: 🚪
+        - text: লগআউট
+    - generic [ref=e33]: © ২০২৫ Bangladesh Election CommissionAll Rights Reserved
+  - generic [ref=e34]:
+    - generic [ref=e35]:
+      - generic [ref=e36]:
+        - generic [ref=e37]: 🗳️
+        - generic [ref=e38]:
+          - heading "বাংলাদেশ ভোটার তথ্য অনুসন্ধান কেন্দ্র" [level=1] [ref=e39]
+          - paragraph [ref=e40]: Smart Voter Information Dashboard
+      - generic [ref=e41]:
+        - generic [ref=e42]:
+          - generic [ref=e43]: 18 সেপ্টেম্বর 2026
+          - generic [ref=e44]: শুক্রবার, 11:59 PM
+        - generic [ref=e45]:
+          - generic [ref=e46]: 👥
+          - generic [ref=e47]:
+            - generic [ref=e48]: মোট ভোটার
+            - generic [ref=e49]: ০
+        - generic [ref=e50]:
+          - generic [ref=e51]: 🏛️
+          - generic [ref=e52]:
+            - generic [ref=e53]: মোট কেন্দ্র
+            - generic [ref=e54]: "0"
+      - generic [ref=e56] [cursor=pointer]:
+        - generic [ref=e57]: 👤
+        - generic [ref=e58]:
+          - generic [ref=e59]: Admin
+          - generic [ref=e60]: Super Admin
+    - generic [ref=e62]:
+      - generic [ref=e63]:
+        - generic [ref=e64]:
+          - generic [ref=e65]:
+            - generic [ref=e66]: মোট ভোটার
+            - generic [ref=e67]: 👥
+          - generic [ref=e68]: ০
+          - generic [ref=e69]: সর্বমোট নিবন্ধিত ভোটার
+        - generic [ref=e73]:
+          - generic [ref=e74]:
+            - generic [ref=e75]: পুরুষ ভোটার
+            - generic [ref=e76]: 🧑
+          - generic [ref=e77]: ০
+          - generic [ref=e78]: 0.00%
+        - generic [ref=e82]:
+          - generic [ref=e83]:
+            - generic [ref=e84]: মহিলা ভোটার
+            - generic [ref=e85]: 👩
+          - generic [ref=e86]: ০
+          - generic [ref=e87]: 0.00%
+        - generic [ref=e91]:
+          - generic [ref=e92]:
+            - generic [ref=e93]: মোট কেন্দ্র
+            - generic [ref=e94]: 🏛️
+          - generic [ref=e95]: "0"
+          - generic [ref=e96]: সর্বমোট ভোট কেন্দ্র
+      - generic [ref=e100]:
+        - generic [ref=e101]:
+          - generic [ref=e102]: স্মার্ট ভোটার অনুসন্ধান
+          - generic [ref=e106]:
+            - generic [ref=e107]:
+              - generic [ref=e108]: জেলা নির্বাচন করুন
+              - combobox [ref=e109]:
+                - option "জেলা নির্বাচন করুন" [selected]
+            - generic [ref=e110]:
+              - generic [ref=e111]: উপজেলা নির্বাচন করুন
+              - combobox [ref=e112]:
+                - option "উপজেলা নির্বাচন করুন" [selected]
+          - generic [ref=e114]:
+            - generic: 👤
+            - textbox "নাম লিখুন" [ref=e115]
+          - generic [ref=e117]:
+            - generic: 👤
+            - textbox "পিতার নাম লিখুন" [ref=e118]
+          - generic [ref=e120]:
+            - generic: 👤
+            - textbox "মাতার নাম লিখুন" [ref=e121]
+          - generic [ref=e123]:
+            - generic: 📅
+            - textbox "জন্ম তারিখ নির্বাচন করুন dd-mm-yyyy" [ref=e124]:
+              - /placeholder: জন্ম তারিখ নির্বাচন করুন  dd-mm-yyyy
+          - generic [ref=e125]:
+            - button "🔍 অনুসন্ধান করুন" [ref=e126] [cursor=pointer]
+            - button "↺ রিসেট" [ref=e127] [cursor=pointer]
+        - generic [ref=e128]:
+          - generic [ref=e129]: লিঙ্গ ভিত্তিক পরিসংখ্যান
+          - generic [ref=e130]:
+            - generic [ref=e131]: পুরুষ (50%)
+            - generic [ref=e134]: মহিলা (50%)
+          - img [ref=e138]:
+            - generic [ref=e141]: 👥
+            - generic [ref=e142]: 50%
+        - generic [ref=e143]:
+          - generic [ref=e144]: জেলা ভিত্তিক ভোটারের হার
+          - paragraph [ref=e146]: ডেটা নেই
+      - generic [ref=e147]:
+        - generic [ref=e148]: সাম্প্রতিক অনুসন্ধান ফলাফল
+        - table [ref=e151]:
+          - rowgroup [ref=e152]:
+            - row [ref=e153]:
+              - columnheader "ক্রমিক নং" [ref=e154]
+              - columnheader "নাম" [ref=e155]
+              - columnheader "পিতার নাম" [ref=e156]
+              - columnheader "মাতার নাম" [ref=e157]
+              - columnheader "জন্ম তারিখ" [ref=e158]
+              - columnheader "জেলা" [ref=e159]
+              - columnheader "উপজেলা" [ref=e160]
+              - columnheader "কেন্দ্র" [ref=e161]
+              - columnheader "বিস্তারিত" [ref=e162]
+          - rowgroup [ref=e163]:
+            - row [ref=e164]:
+              - cell "অনুসন্ধান করুন" [ref=e165]

@@ -1,0 +1,101 @@
+- generic [active] [ref=e1]:
+  - complementary [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]: 🗳️
+      - generic [ref=e5]:
+        - heading "বাংলাদেশ ভোটার তথ্য" [level=2] [ref=e6]
+        - paragraph [ref=e7]: Smart Voter System
+    - navigation [ref=e8]:
+      - generic [ref=e9] [cursor=pointer]:
+        - generic [ref=e10]: 🏠
+        - text: ড্যাশবোর্ড
+      - generic [ref=e11] [cursor=pointer]:
+        - generic [ref=e12]: 🗺️
+        - text: জেলা সমূহ
+      - generic [ref=e13] [cursor=pointer]:
+        - generic [ref=e14]: 📍
+        - text: উপজেলা সমূহ
+      - generic [ref=e15] [cursor=pointer]:
+        - generic [ref=e16]: 🏛️
+        - text: কেন্দ্র সমূহ
+      - generic [ref=e17] [cursor=pointer]:
+        - generic [ref=e18]: 🔍
+        - text: ভোটার অনুসন্ধান
+      - generic [ref=e19] [cursor=pointer]:
+        - generic [ref=e20]: 📊
+        - text: রিপোর্ট ও পরিসংখ্যান
+      - generic [ref=e21] [cursor=pointer]:
+        - generic [ref=e22]: 📄
+        - text: PDF ডাউনলোড
+      - generic [ref=e23] [cursor=pointer]:
+        - generic [ref=e24]: 📥
+        - text: ডেটা এক্সপোর্ট
+      - generic [ref=e25] [cursor=pointer]:
+        - generic [ref=e26]: ⚙️
+        - text: সেটিংস
+      - generic [ref=e27] [cursor=pointer]:
+        - generic [ref=e28]: 👤
+        - text: ব্যবহারকারী লগ
+      - generic [ref=e29] [cursor=pointer]:
+        - generic [ref=e30]: ❓
+        - text: সহায়তা
+      - generic [ref=e31] [cursor=pointer]:
+        - generic [ref=e32]: 🚪
+        - text: লগআউট
+    - generic [ref=e33]: © ২০২৫ Bangladesh Election CommissionAll Rights Reserved
+  - generic [ref=e34]:
+    - generic [ref=e35]:
+      - generic [ref=e36]:
+        - generic [ref=e37]: 🗳️
+        - generic [ref=e38]:
+          - heading "বাংলাদেশ ভোটার তথ্য অনুসন্ধান কেন্দ্র" [level=1] [ref=e39]
+          - paragraph [ref=e40]: Smart Voter Information Dashboard
+      - generic [ref=e41]:
+        - generic [ref=e42]:
+          - generic [ref=e43]: 18 সেপ্টেম্বর 2026
+          - generic [ref=e44]: শুক্রবার, 9:04 PM
+        - generic [ref=e45]:
+          - generic [ref=e46]: 👥
+          - generic [ref=e47]:
+            - generic [ref=e48]: মোট ভোটার
+            - generic [ref=e49]: ৩
+        - generic [ref=e50]:
+          - generic [ref=e51]: 🏛️
+          - generic [ref=e52]:
+            - generic [ref=e53]: মোট কেন্দ্র
+            - generic [ref=e54]: "2"
+      - generic [ref=e56] [cursor=pointer]:
+        - generic [ref=e57]: 👤
+        - generic [ref=e58]:
+          - generic [ref=e59]: Admin
+          - generic [ref=e60]: Super Admin
+    - generic [ref=e166]:
+      - generic [ref=e167]:
+        - generic [ref=e168]: 📥 ডেটা আমদানি (Excel/CSV)
+        - generic [ref=e169] [cursor=pointer]:
+          - generic [ref=e170]: 📊
+          - generic [ref=e171]: Excel / CSV ফাইল বেছে নিন
+          - generic [ref=e172]: .xlsx .xls .csv ফরম্যাট সাপোর্টেড
+        - generic [ref=e193]: ডেটা প্রক্রিয়া হচ্ছে...
+        - generic [ref=e197]: ✅ 3 জন ভোটার সফলভাবে আমদানি হয়েছে।
+      - generic [ref=e173]:
+        - generic [ref=e174]: 📤 ডেটা রপ্তানি
+        - generic [ref=e175]:
+          - generic [ref=e176] [cursor=pointer]:
+            - generic [ref=e177]: 📊
+            - generic [ref=e178]: Excel রপ্তানি
+            - generic [ref=e179]: সব ডেটা .xlsx
+          - generic [ref=e180] [cursor=pointer]:
+            - generic [ref=e181]: 📝
+            - generic [ref=e182]: CSV রপ্তানি
+            - generic [ref=e183]: CSV ফরম্যাট
+          - generic [ref=e184] [cursor=pointer]:
+            - generic [ref=e185]: 🖨️
+            - generic [ref=e186]: PDF রিপোর্ট
+            - generic [ref=e187]: প্রিন্ট-রেডি
+          - generic [ref=e188] [cursor=pointer]:
+            - generic [ref=e189]: 📋
+            - generic [ref=e190]: টেমপ্লেট
+            - generic [ref=e191]: আমদানি ফরম্যাট
+        - generic [ref=e192]: "মোট রপ্তানিযোগ্য: 3 জন ভোটার"
+  - generic: ✅ 3 জন আমদানি সম্পন্ন

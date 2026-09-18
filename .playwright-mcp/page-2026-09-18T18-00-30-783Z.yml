@@ -1,0 +1,86 @@
+- generic [active] [ref=f1e1]:
+  - complementary [ref=f1e2]:
+    - generic [ref=f1e3]:
+      - generic [ref=f1e4]: 🗳️
+      - generic [ref=f1e5]:
+        - heading "বাংলাদেশ ভোটার তথ্য" [level=2] [ref=f1e6]
+        - paragraph [ref=f1e7]: Smart Voter System
+    - navigation [ref=f1e8]:
+      - generic [ref=f1e9] [cursor=pointer]:
+        - generic [ref=f1e10]: 🏠
+        - text: ড্যাশবোর্ড
+      - generic [ref=f1e11] [cursor=pointer]:
+        - generic [ref=f1e12]: 🗺️
+        - text: জেলা সমূহ
+      - generic [ref=f1e13] [cursor=pointer]:
+        - generic [ref=f1e14]: 📍
+        - text: উপজেলা সমূহ
+      - generic [ref=f1e15] [cursor=pointer]:
+        - generic [ref=f1e16]: 🏛️
+        - text: কেন্দ্র সমূহ
+      - generic [ref=f1e17] [cursor=pointer]:
+        - generic [ref=f1e18]: 🔍
+        - text: ভোটার অনুসন্ধান
+      - generic [ref=f1e19] [cursor=pointer]:
+        - generic [ref=f1e20]: 📊
+        - text: রিপোর্ট ও পরিসংখ্যান
+      - generic [ref=f1e21] [cursor=pointer]:
+        - generic [ref=f1e22]: 📄
+        - text: PDF ডাউনলোড
+      - generic [ref=f1e23] [cursor=pointer]:
+        - generic [ref=f1e24]: 📥
+        - text: ডেটা এক্সপোর্ট
+      - generic [ref=f1e25] [cursor=pointer]:
+        - generic [ref=f1e26]: ⚙️
+        - text: সেটিংস
+      - generic [ref=f1e27] [cursor=pointer]:
+        - generic [ref=f1e28]: 👤
+        - text: ব্যবহারকারী লগ
+      - generic [ref=f1e29] [cursor=pointer]:
+        - generic [ref=f1e30]: ❓
+        - text: সহায়তা
+      - generic [ref=f1e31] [cursor=pointer]:
+        - generic [ref=f1e32]: 🚪
+        - text: লগআউট
+    - generic [ref=f1e33]: © ২০২৫ Bangladesh Election CommissionAll Rights Reserved
+  - generic [ref=f1e34]:
+    - generic [ref=f1e35]:
+      - generic [ref=f1e36]:
+        - generic [ref=f1e37]: 🗳️
+        - generic [ref=f1e38]:
+          - heading "বাংলাদেশ ভোটার তথ্য অনুসন্ধান কেন্দ্র" [level=1] [ref=f1e39]
+          - paragraph [ref=f1e40]: Smart Voter Information Dashboard
+      - generic [ref=f1e41]:
+        - generic [ref=f1e42]:
+          - generic [ref=f1e43]: 19 সেপ্টেম্বর 2026
+          - generic [ref=f1e44]: শনিবার, 0:00 AM
+        - generic [ref=f1e45]:
+          - generic [ref=f1e46]: 👥
+          - generic [ref=f1e47]:
+            - generic [ref=f1e48]: মোট ভোটার
+            - generic [ref=f1e49]: ০
+        - generic [ref=f1e50]:
+          - generic [ref=f1e51]: 🏛️
+          - generic [ref=f1e52]:
+            - generic [ref=f1e53]: মোট কেন্দ্র
+            - generic [ref=f1e54]: "0"
+      - generic [ref=f1e56] [cursor=pointer]:
+        - generic [ref=f1e57]: 👤
+        - generic [ref=f1e58]:
+          - generic [ref=f1e59]: Admin
+          - generic [ref=f1e60]: Super Admin
+    - generic [ref=f1e166]:
+      - generic [ref=f1e167]:
+        - generic [ref=f1e168]: 📄 PDF ফাইল প্রিভিউ
+        - generic [ref=f1e169] [cursor=pointer]:
+          - generic [ref=f1e170]: 📄
+          - generic [ref=f1e171]: PDF ফাইল বেছে নিন অথবা এখানে টেনে আনুন
+          - generic [ref=f1e172]: শুধু পৃষ্ঠা দেখার জন্য। ভোটার ডেটা যোগ করতে voter_extractor.py দিয়ে Excel বানিয়ে "ডেটা এক্সপোর্ট" পাতা থেকে আমদানি করুন।
+        - generic [ref=f1e173]: 73টি পৃষ্ঠা পাওয়া গেছে। রেন্ডার হচ্ছে...
+        - generic [ref=f1e177]: ✅ PDF লোড সম্পন্ন। 73টি পৃষ্ঠা পাওয়া গেছে। ভোটার ডেটা যোগ করতে voter_extractor.py দিয়ে Excel বানিয়ে "ডেটা এক্সপোর্ট" পাতা থেকে আমদানি করুন।
+      - generic [ref=f1e178]:
+        - generic [ref=f1e179]: 📖 PDF প্রিভিউ
+        - generic [ref=f1e180]:
+          - button "◀ আগে" [disabled] [ref=f1e181]
+          - generic [ref=f1e182]: পৃষ্ঠা 1 / 73
+          - button "পরে ▶" [ref=f1e183] [cursor=pointer]

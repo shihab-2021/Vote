@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>বাংলাদেশ ভোটার তথ্য অনুসন্ধান কেন্দ্র</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f5;min-height:100vh;display:flex;}
+
+/* SIDEBAR */
+.sidebar{width:190px;min-height:100vh;background:#0d1b2e;display:flex;flex-direction:column;flex-shrink:0;position:fixed;top:0;left:0;bottom:0;z-index:100;overflow-y:auto;}
+.sb-logo-area{padding:14px 12px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.08);}
+.sb-logo{width:38px;height:38px;border-radius:50%;overflow:hidden;flex-shrink:0;background:#1a6b3c;display:flex;align-items:center;justify-content:center;font-size:18px;}
+.sb-brand h2{font-size:10.5px;font-weight:700;color:#fff;line-height:1.4;}
+.sb-brand p{font-size:9px;color:rgba(255,255,255,.45);margin-top:1px;}
+.sb-menu{flex:1;padding:8px 0;}
+.sb-item{display:flex;align-items:center;gap:9px;padding:9px 14px;font-size:12px;color:rgba(255,255,255,.6);cursor:pointer;transition:all .15s;user-select:none;border-left:3px solid transparent;}
+.sb-item:hover{background:rgba(255,255,255,.06);color:#fff;}
+.sb-item.active{background:rgba(59,130,246,.25);color:#60a5fa;border-left-color:#3b82f6;}
+.sb-item .sbi{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
+.sb-item.active .sbi{background:rgba(59,130,246,.3);}
+.sb-footer{padding:10px 12px;font-size:9px;color:rgba(255,255,255,.25);border-top:1px solid rgba(255,255,255,.06);line-height:1.5;}
+
+/* MAIN */
+.main{margin-left:190px;flex:1;display:flex;flex-direction:column;min-width:0;}
+
+/* TOPBAR */
+.topbar{background:#fff;padding:0 20px;height:70px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e5e9f0;flex-shrink:0;}
+.tb-left{display:flex;align-items:center;gap:14px;}
+.tb-logo{width:48px;height:48px;border-radius:50%;background:#1a6b3c;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+.tb-title h1{font-size:18px;font-weight:700;color:#1a2d4d;}
+.tb-title p{font-size:11px;color:#6b7280;margin-top:1px;}
+.tb-center{display:flex;align-items:center;gap:10px;}
+.tb-date{background:#1a2d4d;color:#fff;padding:6px 14px;border-radius:8px;text-align:center;}
+.tb-date .d1{font-size:12px;font-weight:700;}
+.tb-date .d2{font-size:10px;opacity:.75;margin-top:1px;}
+.tb-badge{display:flex;align-items:center;gap:8px;padding:8px 16px;border-radius:10px;color:#fff;min-width:130px;}
+.tb-badge.green{background:#16a34a;}
+.tb-badge.pink{background:#db2777;}
+.tb-badge .badge-ico{font-size:22px;}
+.tb-badge .badge-info .bl{font-size:10px;opacity:.85;}
+.tb-badge .badge-info .bn{font-size:16px;font-weight:800;line-height:1;}
+.tb-right{display:flex;align-items:center;gap:10px;}
+.admin-box{display:flex;align-items:center;gap:8px;cursor:pointer;}
+.admin-ava{width:36px;height:36px;background:#3b82f6;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;}
+.admin-info .an{font-size:12px;font-weight:700;color:#1a2d4d;}
+.admin-info .ar{font-size:10px;color:#6b7280;}
+
+/* CONTENT */
+.content{flex:1;padding:16px 20px;overflow-y:auto;}
+.page{display:none;}
+.page.active{display:block;}
+
+/* STAT CARDS */
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;}
+.stat-card{background:#fff;border-radius:12px;padding:16px 18px;box-shadow:0 1px 3px rgba(0,0,0,.07);}
+.sc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.sc-label{font-size:11px;color:#6b7280;font-weight:600;}
+.sc-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;}
+.sc-num{font-size:26px;font-weight:800;color:#1a2d4d;line-height:1;}
+.sc-sub{font-size:11px;color:#6b7280;margin-top:4px;}
+.sc-wave{height:32px;margin-top:10px;}
+.ib{background:#dbeafe;} .ig{background:#dcfce7;} .ip{background:#fce7f3;} .io{background:#fef3c7;}
+
+/* DASHBOARD GRID */
+.dash-grid{display:grid;grid-template-columns:1fr 320px 280px;gap:16px;margin-bottom:16px;}
+.dash-search{background:#fff;border-radius:12px;padding:18px;box-shadow:0 1px 3px rgba(0,0,0,.07);}
+.dash-pie{background:#fff;border-radius:12px;padding:18px;box-shadow:0 1px 3px rgba(0,0,0,.07);}
+.dash-district{background:#fff;border-radius:12px;padding:18px;box-shadow:0 1px 3px rgba(0,0,0,.07);}
+
+/* SECTION TITLES */
+.sec-title{font-size:14px;font-weight:700;color:#1a2d4d;margin-bottom:14px;display:flex;align-items:center;gap:7px;}
+.sec-title svg{flex-shrink:0;}
+
+/* SEARCH FORM */
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+.fg{margin-bottom:10px;}
+.fg label{display:block;font-size:11px;color:#6b7280;font-weight:600;margin-bottom:4px;}
+.fi{position:relative;}
+.fi input,.fi select{width:100%;padding:9px 12px 9px 36px;border:1.5px solid #e5e9f0;border-radius:8px;font-size:12.5px;font-family:inherit;outline:none;color:#1a2d4d;background:#fafbfc;transition:border .15s;}
+.fi input:focus,.fi select:focus{border-color:#3b82f6;background:#fff;}
+.fi .ico{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:14px;color:#9ca3af;pointer-events:none;}
+select.fi-sel{width:100%;padding:9px 12px;border:1.5px solid #e5e9f0;border-radius:8px;font-size:12.5px;font-family:inherit;outline:none;color:#1a2d4d;background:#fafbfc;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%239ca3af' d='M5 6L0 0h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;transition:border .15s;}
+select.fi-sel:focus{border-color:#3b82f6;}
+.btn-search{width:100%;padding:11px;background:#16a34a;color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .15s;}
+.btn-search:hover{background:#15803d;}
+.btn-reset{width:100%;padding:11px;background:#fdf2f8;color:#db2777;border:2px solid #fbcfe8;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;}
+.btn-reset:hover{background:#fce7f3;}
+.btns2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px;}
+
+/* PIE CHART */
+.pie-legend{display:flex;gap:16px;margin-bottom:12px;justify-content:center;}
+.pl-item{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;}
+.pl-dot{width:14px;height:14px;border-radius:3px;}
+.pie-center{display:flex;justify-content:center;}
+
+/* DISTRICT BARS */
+.dbar-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+.dbar-label{font-size:11px;color:#374151;width:52px;text-align:right;font-weight:500;flex-shrink:0;}
+.dbar-track{flex:1;height:12px;border-radius:6px;overflow:hidden;}
+.dbar-fill{height:100%;border-radius:6px;}
+.dbar-pct{font-size:11px;font-weight:700;color:#1a2d4d;width:36px;text-align:right;}
+
+/* RESULTS TABLE */
+.res-card{background:#fff;border-radius:12px;padding:18px;box-shadow:0 1px 3px rgba(0,0,0,.07);margin-bottom:16px;}
+.tbl-wrap{overflow-x:auto;border-radius:10px;border:1px solid #e5e9f0;}
+table{width:100%;border-collapse:collapse;font-size:12px;min-width:700px;}
+thead tr{background:#1a2d4d;}
+thead th{padding:10px 12px;color:#fff;text-align:left;font-size:11px;font-weight:600;white-space:nowrap;}
+tbody tr{border-bottom:1px solid #f3f4f6;}
+tbody tr:hover{background:#f8faff;}
+tbody td{padding:9px 12px;color:#374151;}
+.btn-detail{background:#16a34a;color:#fff;border:none;border-radius:7px;padding:5px 12px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:600;white-space:nowrap;}
+.btn-detail:hover{background:#15803d;}
+.see-more{display:flex;justify-content:flex-end;margin-top:12px;}
+.btn-more{background:#1a2d4d;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;}
+
+/* GENERIC CARDS */
+.card{background:#fff;border-radius:12px;padding:18px;box-shadow:0 1px 3px rgba(0,0,0,.07);margin-bottom:16px;}
+.fg2{margin-bottom:12px;}
+.fg2 label{display:block;font-size:11px;color:#6b7280;font-weight:600;margin-bottom:5px;}
+.fg2 input,.fg2 select{width:100%;padding:9px 13px;border:1.5px solid #e5e9f0;border-radius:8px;font-size:13px;font-family:inherit;outline:none;color:#1a2d4d;background:#fafbfc;transition:border .15s;}
+.fg2 input:focus,.fg2 select:focus{border-color:#3b82f6;background:#fff;}
+.fg2 select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%239ca3af' d='M5 6L0 0h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;}
+.row2b{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.btn-primary{padding:11px 24px;background:#16a34a;color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+.btn-primary:hover{background:#15803d;}
+.btn-secondary2{padding:11px 24px;background:#fff;color:#6b7280;border:1.5px solid #e5e9f0;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;}
+
+/* PDF UPLOAD */
+.upload-zone{border:2px dashed #cbd5e1;border-radius:12px;padding:40px 20px;text-align:center;cursor:pointer;transition:all .2s;background:#f8fafc;}
+.upload-zone:hover,.upload-zone.drag{border-color:#3b82f6;background:#eff6ff;}
+.upload-zone input{display:none;}
+.uz-ico{font-size:44px;margin-bottom:12px;}
+.uz-text{font-size:14px;color:#374151;font-weight:600;}
+.uz-sub{font-size:11px;color:#9ca3af;margin-top:5px;}
+.prog-bar{height:8px;background:#e5e9f0;border-radius:10px;overflow:hidden;margin:12px 0;}
+.prog-fill{height:100%;background:#16a34a;border-radius:10px;transition:width .4s;}
+.prog-msg{font-size:12px;color:#6b7280;margin-bottom:4px;}
+.alert-success{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 16px;font-size:13px;color:#15803d;font-weight:600;margin-top:12px;}
+.alert-error{background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:12px 16px;font-size:13px;color:#dc2626;margin-top:12px;}
+.pdf-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.pdf-nav button{background:#1a2d4d;color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:12px;cursor:pointer;font-family:inherit;}
+.pdf-nav button:disabled{opacity:.4;cursor:default;}
+.pdf-nav span{font-size:12px;font-weight:600;color:#6b7280;}
+.pdf-canvas-box{background:#e5e7eb;border-radius:10px;overflow:auto;padding:10px;max-height:520px;text-align:center;}
+.pdf-canvas-box canvas{border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.2);max-width:100%;}
+
+/* EXPORT TILES */
+.exp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
+.exp-tile{border:2px solid #e5e9f0;border-radius:12px;padding:18px 12px;text-align:center;cursor:pointer;transition:all .2s;}
+.exp-tile:hover{border-color:#1a2d4d;background:#f8faff;}
+.exp-ico{font-size:34px;margin-bottom:8px;}
+.exp-title{font-size:12px;font-weight:700;color:#1a2d4d;}
+.exp-sub{font-size:10px;color:#9ca3af;margin-top:3px;}
+
+/* MODAL */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;}
+.modal{background:#fff;border-radius:16px;padding:24px;width:100%;max-width:420px;max-height:90vh;overflow-y:auto;}
+.modal-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:14px;border-bottom:2px solid #e5e9f0;}
+.modal-ttl{font-size:16px;font-weight:700;color:#1a2d4d;}
+.modal-cls{background:#f3f4f6;border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;}
+.voter-ava{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#1a2d4d,#3b82f6);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 14px;}
+.det-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #f3f4f6;font-size:13px;}
+.det-l{color:#6b7280;font-weight:500;}
+.det-v{font-weight:700;color:#1a2d4d;text-align:right;max-width:55%;}
+.btn-del{flex:1;padding:10px;background:#dc2626;color:#fff;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;}
+.btn-cls2{flex:1;padding:10px;background:#1a2d4d;color:#fff;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;}
+.modal-btns{display:flex;gap:10px;margin-top:16px;}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a2d4d;color:#fff;padding:10px 24px;border-radius:30px;font-size:12px;z-index:999;animation:fup .3s;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.25);pointer-events:none;}
+@keyframes fup{from{opacity:0;transform:translateX(-50%) translateY(8px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
+.hidden{display:none!important;}
+.badge-m{background:#dbeafe;color:#1d4ed8;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700;}
+.badge-f{background:#fce7f3;color:#be185d;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700;}
+
+@media(max-width:900px){
+  .sidebar{transform:translateX(-100%);transition:transform .3s;}
+  .sidebar.open{transform:translateX(0);}
+  .main{margin-left:0;}
+  .stat-row{grid-template-columns:1fr 1fr;}
+  .dash-grid{grid-template-columns:1fr;}
+  .exp-grid{grid-template-columns:1fr 1fr;}
+  .mob-menu{display:flex!important;}
+}
+.mob-menu{display:none;background:none;border:none;font-size:22px;cursor:pointer;color:#1a2d4d;margin-right:8px;}
+.mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99;}
+.mob-overlay.show{display:block;}
+</style>
+</head>
+<body>
+
+<div class="mob-overlay" id="mobOverlay" onclick="closeMob()"></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sb-logo-area">
+    <div class="sb-logo">🗳️</div>
+    <div class="sb-brand">
+      <h2>বাংলাদেশ ভোটার তথ্য</h2>
+      <p>Smart Voter System</p>
+    </div>
+  </div>
+  <nav class="sb-menu">
+    <div class="sb-item active" onclick="gotoPage('dashboard',this)"><span class="sbi">🏠</span>ড্যাশবোর্ড</div>
+    <div class="sb-item" onclick="gotoPage('district',this)"><span class="sbi">🗺️</span>জেলা সমূহ</div>
+    <div class="sb-item" onclick="gotoPage('upazila',this)"><span class="sbi">📍</span>উপজেলা সমূহ</div>
+    <div class="sb-item" onclick="gotoPage('centers',this)"><span class="sbi">🏛️</span>কেন্দ্র সমূহ</div>
+    <div class="sb-item" onclick="gotoPage('search',this)"><span class="sbi">🔍</span>ভোটার অনুসন্ধান</div>
+    <div class="sb-item" onclick="gotoPage('report',this)"><span class="sbi">📊</span>রিপোর্ট ও পরিসংখ্যান</div>
+    <div class="sb-item" onclick="gotoPage('pdfup',this)"><span class="sbi">📄</span>PDF ডাউনলোড</div>
+    <div class="sb-item" onclick="gotoPage('dataexp',this)"><span class="sbi">📥</span>ডেটা এক্সপোর্ট</div>
+    <div class="sb-item" onclick="gotoPage('settings',this)"><span class="sbi">⚙️</span>সেটিংস</div>
+    <div class="sb-item" onclick="gotoPage('logs',this)"><span class="sbi">👤</span>ব্যবহারকারী লগ</div>
+    <div class="sb-item" onclick="gotoPage('help',this)"><span class="sbi">❓</span>সহায়তা</div>
+    <div class="sb-item" onclick="if(confirm('লগআউট করবেন?'))toast('লগআউট হচ্ছে...')"><span class="sbi">🚪</span>লগআউট</div>
+  </nav>
+  <div class="sb-footer">© ২০২৫ Bangladesh Election Commission<br>All Rights Reserved</div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="tb-left">
+    <button class="mob-menu" onclick="openMob()">☰</button>
+    <div class="tb-logo">🗳️</div>
+    <div class="tb-title">
+      <h1>বাংলাদেশ ভোটার তথ্য অনুসন্ধান কেন্দ্র</h1>
+      <p>Smart Voter Information Dashboard</p>
+    </div>
+  </div>
+  <div class="tb-center">
+    <div class="tb-date">
+      <div class="d1" id="tb-date1">২৪ মে ২০২৫</div>
+      <div class="d2" id="tb-date2">শনিবার, ০২:৩০ PM</div>
+    </div>
+    <div class="tb-badge green">
+      <div class="badge-ico">👥</div>
+      <div class="badge-info">
+        <div class="bl">মোট ভোটার</div>
+        <div class="bn" id="hdr-total">0</div>
+      </div>
+    </div>
+    <div class="tb-badge pink">
+      <div class="badge-ico">🏛️</div>
+      <div class="badge-info">
+        <div class="bl">মোট কেন্দ্র</div>
+        <div class="bn" id="hdr-centers">0</div>
+      </div>
+    </div>
+  </div>
+  <div class="tb-right">
+    <div class="admin-box">
+      <div class="admin-ava">👤</div>
+      <div class="admin-info">
+        <div class="an">Admin</div>
+        <div class="ar">Super Admin</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+<!-- ======== DASHBOARD ======== -->
+<div class="page active" id="pg-dashboard">
+  <!-- Stat cards -->
+  <div class="stat-row">
+    <div class="stat-card">
+      <div class="sc-top"><div class="sc-label">মোট ভোটার</div><div class="sc-icon ib">👥</div></div>
+      <div class="sc-num" id="sc-total">0</div>
+      <div class="sc-sub">সর্বমোট নিবন্ধিত ভোটার</div>
+      <div class="sc-wave"><svg width="100%" height="32" viewBox="0 0 160 32"><polyline points="0,26 25,20 50,24 80,10 105,18 130,8 160,14" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round"/></svg></div>
+    </div>
+    <div class="stat-card">
+      <div class="sc-top"><div class="sc-label">পুরুষ ভোটার</div><div class="sc-icon ig">🧑</div></div>
+      <div class="sc-num" id="sc-male">0</div>
+      <div class="sc-sub" id="sc-male-pct">0%</div>
+      <div class="sc-wave"><svg width="100%" height="32" viewBox="0 0 160 32"><polyline points="0,22 25,14 50,20 80,8 105,14 130,6 160,12" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round"/></svg></div>
+    </div>
+    <div class="stat-card">
+      <div class="sc-top"><div class="sc-label">মহিলা ভোটার</div><div class="sc-icon ip">👩</div></div>
+      <div class="sc-num" id="sc-female">0</div>
+      <div class="sc-sub" id="sc-female-pct">0%</div>
+      <div class="sc-wave"><svg width="100%" height="32" viewBox="0 0 160 32"><polyline points="0,24 25,18 50,22 80,12 105,20 130,10 160,16" fill="none" stroke="#ec4899" stroke-width="2" stroke-linecap="round"/></svg></div>
+    </div>
+    <div class="stat-card">
+      <div class="sc-top"><div class="sc-label">মোট কেন্দ্র</div><div class="sc-icon io">🏛️</div></div>
+      <div class="sc-num" id="sc-centers">0</div>
+      <div class="sc-sub">সর্বমোট ভোট কেন্দ্র</div>
+      <div class="sc-wave"><svg width="100%" height="32" viewBox="0 0 160 32"><polyline points="0,20 25,12 50,18 80,6 105,14 130,8 160,12" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round"/></svg></div>
+    </div>
+  </div>
+
+  <!-- 3-column grid -->
+  <div class="dash-grid">
+    <!-- Search -->
+    <div class="dash-search">
+      <div class="sec-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1a2d4d" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        স্মার্ট ভোটার অনুসন্ধান
+      </div>
+      <div class="row2">
+        <div>
+          <div style="font-size:11px;color:#6b7280;font-weight:600;margin-bottom:5px;">জেলা নির্বাচন করুন</div>
+          <select class="fi-sel" id="d-district" onchange="dUpa()"><option value="">জেলা নির্বাচন করুন</option></select>
+        </div>
+        <div>
+          <div style="font-size:11px;color:#6b7280;font-weight:600;margin-bottom:5px;">উপজেলা নির্বাচন করুন</div>
+          <select class="fi-sel" id="d-upazila"><option value="">উপজেলা নির্বাচন করুন</option></select>
+        </div>
+      </div>
+      <div class="fg" style="margin-bottom:10px;">
+        <div class="fi"><span class="ico">👤</span><input type="text" id="d-name" placeholder="নাম লিখুন" style="padding-left:36px;"></div>
+      </div>
+      <div class="fg" style="margin-bottom:10px;">
+        <div class="fi"><span class="ico">👤</span><input type="text" id="d-father" placeholder="পিতার নাম লিখুন" style="padding-left:36px;"></div>
+      </div>
+      <div class="fg" style="margin-bottom:10px;">
+        <div class="fi"><span class="ico">👤</span><input type="text" id="d-mother" placeholder="মাতার নাম লিখুন" style="padding-left:36px;"></div>
+      </div>
+      <div class="fg" style="margin-bottom:14px;">
+        <div class="fi"><span class="ico">📅</span><input type="text" id="d-dob" placeholder="জন্ম তারিখ নির্বাচন করুন  dd-mm-yyyy" style="padding-left:36px;"></div>
+      </div>
+      <div class="btns2">
+        <button class="btn-search" onclick="doSearch()">🔍 অনুসন্ধান করুন</button>
+        <button class="btn-reset" onclick="resetSearch()">↺ রিসেট</button>
+      </div>
+    </div>
+
+    <!-- Pie -->
+    <div class="dash-pie">
+      <div class="sec-title">লিঙ্গ ভিত্তিক পরিসংখ্যান</div>
+      <div class="pie-legend">
+        <div class="pl-item"><div class="pl-dot" style="background:#3b82f6"></div><span id="pl-male">পুরুষ (0%)</span></div>
+        <div class="pl-item"><div class="pl-dot" style="background:#ec4899"></div><span id="pl-female">মহিলা (0%)</span></div>
+      </div>
+      <div class="pie-center">
+        <svg width="220" height="220" viewBox="0 0 220 220" id="pie-svg">
+          <circle cx="110" cy="110" r="80" fill="#e5e7eb"/>
+          <circle cx="110" cy="110" r="45" fill="#fff"/>
+          <text x="110" y="106" text-anchor="middle" font-size="11" fill="#6b7280" font-family="Arial">👥</text>
+          <text x="110" y="124" text-anchor="middle" font-size="13" font-weight="700" fill="#1a2d4d" id="pie-ctr">0%</text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- District bars -->
+    <div class="dash-district">
+      <div class="sec-title">জেলা ভিত্তিক ভোটারের হার</div>
+      <div id="dist-bars"><p style="font-size:12px;color:#9ca3af;text-align:center;padding:20px 0;">ডেটা নেই</p></div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div class="res-card">
+    <div class="sec-title">সাম্প্রতিক অনুসন্ধান ফলাফল <span id="res-count" style="font-size:11px;background:#eff6ff;color:#1a2d4d;padding:2px 10px;border-radius:20px;margin-left:6px;font-weight:600;"></span></div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>ক্রমিক নং</th><th>নাম</th><th>পিতার নাম</th><th>মাতার নাম</th><th>জন্ম তারিখ</th><th>জেলা</th><th>উপজেলা</th><th>কেন্দ্র</th><th>বিস্তারিত</th></tr></thead>
+        <tbody id="res-tbody"><tr><td colspan="9" style="text-align:center;padding:24px;color:#9ca3af;">অনুসন্ধান করুন</td></tr></tbody>
+      </table>
+    </div>
+    <div class="see-more" id="see-more"></div>
+  </div>
+</div>
+
+<!-- ======== SEARCH PAGE ======== -->
+<div class="page" id="pg-search">
+  <div class="card">
+    <div class="sec-title">🔍 উন্নত ভোটার অনুসন্ধান</div>
+    <div class="row2b" style="margin-bottom:12px;">
+      <div class="fg2"><label>জেলা</label><select class="fg2 fi-sel" id="s-district" onchange="sUpa()" style="margin-top:0;"><option value="">সব জেলা</option></select></div>
+      <div class="fg2"><label>উপজেলা</label><select class="fg2 fi-sel" id="s-upazila" onchange="sUnion()" style="margin-top:0;"><option value="">সব উপজেলা</option></select></div>
+    </div>
+    <div class="row2b" style="margin-bottom:12px;">
+      <div class="fg2"><label>ইউনিয়ন/ওয়ার্ড</label><select class="fg2 fi-sel" id="s-union" onchange="sArea()" style="margin-top:0;"><option value="">সব ইউনিয়ন</option></select></div>
+      <div class="fg2"><label>ভোটার এলাকা</label><select class="fg2 fi-sel" id="s-area" style="margin-top:0;"><option value="">সব এলাকা</option></select></div>
+    </div>
+    <div class="row2b" style="margin-bottom:12px;">
+      <div class="fg2"><label>নাম</label><input type="text" id="s-name" placeholder="নাম লিখুন"></div>
+      <div class="fg2"><label>পিতার নাম</label><input type="text" id="s-father" placeholder="পিতার নাম"></div>
+    </div>
+    <div class="row2b" style="margin-bottom:12px;">
+      <div class="fg2"><label>মাতার নাম</label><input type="text" id="s-mother" placeholder="মাতার নাম"></div>
+      <div class="fg2"><label>জন্ম তারিখ</label><input type="text" id="s-dob" placeholder="DD-MM-YYYY"></div>
+    </div>
+    <div class="row2b" style="margin-bottom:14px;">
+      <div class="fg2"><label>লিঙ্গ</label><select class="fg2 fi-sel" id="s-gender" style="margin-top:0;"><option value="">সব</option><option>পুরুষ</option><option>মহিলা</option></select></div>
+      <div class="fg2"><label>ভোটার আইডি</label><input type="text" id="s-vid" placeholder="BD-XXXXXXXXXX"></div>
+    </div>
+    <div class="btns2" style="max-width:360px;">
+      <button class="btn-search" onclick="doAdvSearch()">🔍 অনুসন্ধান করুন</button>
+      <button class="btn-reset" onclick="resetAdv()">↺ রিসেট</button>
+    </div>
+  </div>
+  <div class="res-card">
+    <div class="sec-title">ফলাফল <span id="adv-count" style="font-size:11px;background:#eff6ff;color:#1a2d4d;padding:2px 10px;border-radius:20px;margin-left:6px;font-weight:600;"></span>
+      <button class="btn-primary" style="padding:7px 14px;font-size:11px;margin-left:auto;" onclick="printAdvResults()">🖨️ ফলাফল প্রিন্ট করুন</button>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>#</th><th>নাম</th><th>পিতার নাম</th><th>মাতার নাম</th><th>জন্ম তারিখ</th><th>জেলা</th><th>উপজেলা</th><th>কেন্দ্র</th><th>বিস্তারিত</th></tr></thead>
+        <tbody id="adv-tbody"><tr><td colspan="9" style="text-align:center;padding:24px;color:#9ca3af;">অনুসন্ধান করুন</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ======== PDF UPLOAD ======== -->
+<div class="page" id="pg-pdfup">
+  <div class="card">
+    <div class="sec-title">📄 PDF ফাইল প্রিভিউ</div>
+    <div class="upload-zone" id="pdfZone" onclick="document.getElementById('pdfFile').click()" ondrop="onPdfDrop(event)" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')">
+      <input type="file" id="pdfFile" accept=".pdf" onchange="onPdfFile(event)">
+      <div class="uz-ico">📄</div>
+      <div class="uz-text">PDF ফাইল বেছে নিন অথবা এখানে টেনে আনুন</div>
+      <div class="uz-sub">শুধু পৃষ্ঠা দেখার জন্য। ভোটার ডেটা যোগ করতে voter_extractor.py দিয়ে Excel বানিয়ে "ডেটা এক্সপোর্ট" পাতা থেকে আমদানি করুন।</div>
+    </div>
+    <div class="hidden" id="pdf-prog-wrap">
+      <div class="prog-msg" id="pdf-prog-msg">লোড হচ্ছে...</div>
+      <div class="prog-bar"><div class="prog-fill" id="pdf-prog-fill" style="width:0%"></div></div>
+    </div>
+    <div class="hidden" id="pdf-alert"></div>
+  </div>
+
+  <div class="card hidden" id="pdf-view-card">
+    <div class="sec-title">📖 PDF প্রিভিউ</div>
+    <div class="pdf-nav">
+      <button onclick="pdfPrev()" id="pdf-prev-btn">◀ আগে</button>
+      <span id="pdf-page-lbl">পৃষ্ঠা ১ / ১</span>
+      <button onclick="pdfNext()" id="pdf-next-btn">পরে ▶</button>
+    </div>
+    <div class="pdf-canvas-box"><canvas id="pdfCanvas"></canvas></div>
+  </div>
+</div>
+
+<!-- ======== DATA EXPORT ======== -->
+<div class="page" id="pg-dataexp">
+  <div class="card">
+    <div class="sec-title">📥 ডেটা আমদানি (Excel/CSV)</div>
+    <div class="upload-zone" id="xlsZone" onclick="document.getElementById('xlsFile').click()" ondrop="onXlsDrop(event)" ondragover="event.preventDefault()">
+      <input type="file" id="xlsFile" accept=".xlsx,.xls,.csv" onchange="onXlsFile(event)">
+      <div class="uz-ico">📊</div>
+      <div class="uz-text">Excel / CSV ফাইল বেছে নিন</div>
+      <div class="uz-sub">.xlsx .xls .csv ফরম্যাট সাপোর্টেড</div>
+    </div>
+    <div class="hidden" id="xls-prog-wrap">
+      <div class="prog-msg" id="xls-prog-msg">প্রক্রিয়াকরণ...</div>
+      <div class="prog-bar"><div class="prog-fill" id="xls-prog-fill" style="width:0%"></div></div>
+    </div>
+    <div class="hidden" id="xls-alert"></div>
+  </div>
+  <div class="card">
+    <div class="sec-title">📤 ডেটা রপ্তানি</div>
+    <div class="exp-grid">
+      <div class="exp-tile" onclick="expExcel()"><div class="exp-ico">📊</div><div class="exp-title">Excel রপ্তানি</div><div class="exp-sub">সব ডেটা .xlsx</div></div>
+      <div class="exp-tile" onclick="expCSV()"><div class="exp-ico">📝</div><div class="exp-title">CSV রপ্তানি</div><div class="exp-sub">CSV ফরম্যাট</div></div>
+      <div class="exp-tile" onclick="expPDF()"><div class="exp-ico">🖨️</div><div class="exp-title">PDF রিপোর্ট</div><div class="exp-sub">প্রিন্ট-রেডি</div></div>
+      <div class="exp-tile" onclick="dlTemplate()"><div class="exp-ico">📋</div><div class="exp-title">টেমপ্লেট</div><div class="exp-sub">আমদানি ফরম্যাট</div></div>
+    </div>
+    <div style="background:#eff6ff;border-radius:10px;padding:12px 16px;font-size:13px;color:#1a2d4d;font-weight:600;">মোট রপ্তানিযোগ্য: <span id="exp-count">0</span> জন ভোটার</div>
+  </div>
+</div>
+
+<!-- ======== ADD VOTER (via ভোটার যোগ) ======== -->
+<div class="page" id="pg-addvoter">
+  <div class="card">
+    <div class="sec-title">➕ নতুন ভোটার যোগ করুন</div>
+    <div class="fg2"><label>নাম (বাংলা) *</label><input type="text" id="a-name" placeholder="ভোটারের সম্পূর্ণ নাম"></div>
+    <div class="row2b" style="margin-bottom:0;">
+      <div class="fg2"><label>পিতার নাম *</label><input type="text" id="a-father" placeholder="পিতার নাম"></div>
+      <div class="fg2"><label>মাতার নাম *</label><input type="text" id="a-mother" placeholder="মাতার নাম"></div>
+    </div>
+    <div class="row2b" style="margin-bottom:0;">
+      <div class="fg2"><label>জন্ম তারিখ * (DD-MM-YYYY)</label><input type="text" id="a-dob" placeholder="01-01-1990"></div>
+      <div class="fg2"><label>লিঙ্গ *</label><select id="a-gender" class="fi-sel"><option value="">নির্বাচন করুন</option><option>পুরুষ</option><option>মহিলা</option></select></div>
+    </div>
+    <div class="row2b" style="margin-bottom:0;">
+      <div class="fg2"><label>জেলা *</label>
+        <select id="a-district" class="fi-sel" onchange="aUpa()">
+          <option value="">জেলা নির্বাচন করুন</option>
+          <option>ঢাকা</option><option>চট্টগ্রাম</option><option>রাজশাহী</option>
+          <option>খুলনা</option><option>বরিশাল</option><option>সিলেট</option>
+          <option>রংপুর</option><option>ময়মনসিংহ</option>
+        </select>
+      </div>
+      <div class="fg2"><label>উপজেলা *</label><select id="a-upazila" class="fi-sel"><option value="">উপজেলা নির্বাচন করুন</option></select></div>
+    </div>
+    <div class="row2b" style="margin-bottom:0;">
+      <div class="fg2"><label>কেন্দ্র নং *</label><input type="number" id="a-center" placeholder="কেন্দ্র নম্বর"></div>
+      <div class="fg2"><label>ভোটার আইডি</label><input type="text" id="a-vid" placeholder="BD-XXXXXXXXXX (ঐচ্ছিক)"></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:4px;">
+      <button class="btn-primary" onclick="addVoter()">✅ সংরক্ষণ করুন</button>
+      <button class="btn-secondary2" onclick="clearAdd()">✕ ক্লিয়ার</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======== DISTRICT ======== -->
+<div class="page" id="pg-district">
+  <div class="res-card"><div class="sec-title">🗺️ জেলা সমূহ</div><div id="dist-list"></div></div>
+</div>
+<!-- ======== UPAZILA ======== -->
+<div class="page" id="pg-upazila">
+  <div class="res-card"><div class="sec-title">📍 উপজেলা সমূহ</div><div id="upa-list"></div></div>
+</div>
+<!-- ======== CENTERS ======== -->
+<div class="page" id="pg-centers">
+  <div class="res-card"><div class="sec-title">🏛️ কেন্দ্র সমূহ</div><div id="cen-list"></div></div>
+</div>
+<!-- ======== REPORT ======== -->
+<div class="page" id="pg-report">
+  <div class="res-card"><div class="sec-title">📊 রিপোর্ট ও পরিসংখ্যান</div><div id="report-body"></div></div>
+</div>
+<!-- ======== SETTINGS ======== -->
+<div class="page" id="pg-settings">
+  <div class="card"><div class="sec-title">⚙️ সেটিংস</div>
+    <div class="fg2"><label>সিস্টেমের নাম</label><input type="text" value="বাংলাদেশ ভোটার তথ্য অনুসন্ধান কেন্দ্র"></div>
+    <div class="fg2"><label>প্রশাসক নাম</label><input type="text" value="Super Admin"></div>
+    <div style="display:flex;gap:10px;"><button class="btn-primary" onclick="toast('✅ সংরক্ষিত হয়েছে')">💾 সংরক্ষণ</button></div>
+  </div>
+</div>
+<!-- ======== LOGS ======== -->
+<div class="page" id="pg-logs">
+  <div class="res-card"><div class="sec-title">👤 ব্যবহারকারী লগ</div><div id="logs-body"><p style="font-size:12px;color:#9ca3af;">কোনো লগ নেই</p></div></div>
+</div>
+<!-- ======== HELP ======== -->
+<div class="page" id="pg-help">
+  <div class="card"><div class="sec-title">❓ সহায়তা ও নির্দেশনা</div>
+    <div style="font-size:13px;line-height:2.2;color:#374151;">
+      <p>🏠 <b>ড্যাশবোর্ড</b> — সামগ্রিক পরিসংখ্যান ও দ্রুত অনুসন্ধান</p>
+      <p>🔍 <b>ভোটার অনুসন্ধান</b> — উন্নত ফিল্টার দিয়ে ভোটার খুঁজুন</p>
+      <p>📄 <b>PDF ডাউনলোড</b> — ভোটার তালিকার PDF আপলোড করে পৃষ্ঠা দেখুন (শুধু প্রিভিউ)</p>
+      <p>📥 <b>ডেটা এক্সপোর্ট</b> — Excel/CSV আমদানি ও PDF/Excel রপ্তানি</p>
+      <p style="color:#9ca3af;font-size:11px;margin-top:12px;">যোগাযোগ: support@bec.gov.bd</p>
+    </div>
+  </div>
+</div>
+
+</div><!-- /content -->
+</div><!-- /main -->
+
+<!-- MODAL -->
+<div class="overlay hidden" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-hd">
+      <span class="modal-ttl">ভোটারের বিস্তারিত তথ্য</span>
+      <button class="modal-cls" onclick="closeModal()">✕</button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+<div class="toast hidden" id="toast-el"></div>
+
+<script>
+// ===== STATE =====
+let voters = JSON.parse(localStorage.getItem('bd_voters')||'[]');
+let advResults=[];
+let pdfDocObj=null, pdfCurPage=1;
+let logs = JSON.parse(localStorage.getItem('bd_logs')||'[]');
+
+const UPAZILA={
+  'ঢাকা':['সাভার','ধামরাই','দোহার','নবাবগঞ্জ','কেরানীগঞ্জ','মিরপুর','গুলশান','মতিঝিল'],
+  'চট্টগ্রাম':['হাটহাজারী','রাউজান','রাঙ্গুনিয়া','সীতাকুণ্ড','মিরসরাই','ফটিকছড়ি','বোয়ালখালী'],
+  'রাজশাহী':['বাঘা','চারঘাট','পুঠিয়া','দুর্গাপুর','গোদাগাড়ী','তানোর','মোহনপুর'],
+  'খুলনা':['দিঘলিয়া','ডুমুরিয়া','ফুলতলা','বটিয়াঘাটা','দাকোপ','কয়রা'],
+  'বরিশাল':['বাকেরগঞ্জ','বাবুগঞ্জ','আগৈলঝাড়া','গৌরনদী','মেহেন্দিগঞ্জ','উজিরপুর'],
+  'সিলেট':['বালাগঞ্জ','বিয়ানীবাজার','বিশ্বনাথ','ওসমানীনগর','গোলাপগঞ্জ','ফেঞ্চুগঞ্জ'],
+  'রংপুর':['কাউনিয়া','গঙ্গাচড়া','মিঠাপুকুর','পীরগঞ্জ','তারাগঞ্জ','বদরগঞ্জ'],
+  'ময়মনসিংহ':['ভালুকা','গফরগাঁও','গৌরীপুর','হালুয়াঘাট','ঈশ্বরগঞ্জ','নান্দাইল']
+};
+const BAR_COLORS=['#3b82f6','#22c55e','#a855f7','#f97316','#ec4899','#14b8a6','#eab308','#6366f1'];
+
+// ===== NAVIGATION =====
+function gotoPage(name, el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('pg-'+name).classList.add('active');
+  document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
+  if(el) el.classList.add('active');
+  closeMob();
+  if(name==='dashboard'){refreshDash();}
+  if(name==='search'){refreshSearchDropdowns();}
+  if(name==='district'){renderDistList();}
+  if(name==='upazila'){renderUpaList();}
+  if(name==='centers'){renderCenList();}
+  if(name==='report'){renderReport();}
+  if(name==='logs'){renderLogs();}
+}
+function openMob(){document.getElementById('sidebar').classList.add('open');document.getElementById('mobOverlay').classList.add('show');}
+function closeMob(){document.getElementById('sidebar').classList.remove('open');document.getElementById('mobOverlay').classList.remove('show');}
+
+// ===== SAVE =====
+function save(){
+  localStorage.setItem('bd_voters',JSON.stringify(voters));
+  refreshDash();
+}
+function addLog(msg){
+  logs.unshift({t:new Date().toLocaleString('bn-BD'),m:msg});
+  if(logs.length>100)logs.pop();
+  localStorage.setItem('bd_logs',JSON.stringify(logs));
+}
+
+// ===== STATS =====
+function refreshDash(){
+  const total=voters.length, males=voters.filter(v=>v.gender==='পুরুষ').length, females=total-males;
+  const centers=new Set(voters.map(v=>`${v.center}|${v.district}|${v.upazila}`)).size;
+  const pct=(n,d)=>d?(n/d*100).toFixed(2)+'%':'0.00%';
+  ['sc-total','hdr-total'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=total.toLocaleString('bn-BD');});
+  ['sc-male'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=males.toLocaleString('bn-BD');});
+  ['sc-female'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=females.toLocaleString('bn-BD');});
+  ['sc-centers','hdr-centers'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=centers;});
+  document.getElementById('sc-male-pct').textContent=pct(males,total);
+  document.getElementById('sc-female-pct').textContent=pct(females,total);
+  document.getElementById('exp-count').textContent=total;
+  // pie
+  const mp=total?Math.round(males/total*100):50;
+  document.getElementById('pl-male').textContent=`পুরুষ (${mp}%)`;
+  document.getElementById('pl-female').textContent=`মহিলা (${100-mp}%)`;
+  document.getElementById('pie-ctr').textContent=mp+'%';
+  drawPie(males,females);
+  // dropdown
+  const districts=[...new Set(voters.map(v=>v.district))].filter(Boolean).sort();
+  const dd=document.getElementById('d-district');
+  const cur=dd.value;
+  dd.innerHTML='<option value="">জেলা নির্বাচন করুন</option>'+districts.map(d=>`<option${d===cur?' selected':''}>${d}</option>`).join('');
+  // bars
+  renderDistBars();
+}
+
+function drawPie(m,f){
+  const svg=document.getElementById('pie-svg');
+  svg.querySelectorAll('.pie-arc').forEach(e=>e.remove());
+  const total=m+f;if(!total)return;
+  const cx=110,cy=110,r=80,inner=45;
+  const mAngle=2*Math.PI*m/total;
+  const x1=cx+r*Math.sin(mAngle),y1=cy-r*Math.cos(mAngle);
+  const xi1=cx+inner*Math.sin(mAngle),yi1=cy-inner*Math.cos(mAngle);
+  const lg=mAngle>Math.PI?1:0;
+  function arc(color,startA,endA,reverse){
+    const x1a=cx+r*Math.sin(startA),y1a=cy-r*Math.cos(startA);
+    const x2a=cx+r*Math.sin(endA),y2a=cy-r*Math.cos(endA);
+    const xi1a=cx+inner*Math.sin(startA),yi1a=cy-inner*Math.cos(startA);
+    const xi2a=cx+inner*Math.sin(endA),yi2a=cy-inner*Math.cos(endA);
+    const bigArc=endA-startA>Math.PI?1:0;
+    const p=document.createElementNS('http://www.w3.org/2000/svg','path');
+    p.setAttribute('class','pie-arc');
+    p.setAttribute('fill',color);
+    p.setAttribute('d',`M${x1a},${y1a} A${r},${r} 0 ${bigArc},1 ${x2a},${y2a} L${xi2a},${yi2a} A${inner},${inner} 0 ${bigArc},0 ${xi1a},${yi1a} Z`);
+    const ref=svg.querySelector('#pie-ctr');
+    svg.insertBefore(p,ref);
+  }
+  arc('#3b82f6',0,mAngle);
+  arc('#ec4899',mAngle,2*Math.PI);
+  // labels
+  svg.querySelectorAll('.pie-label-t').forEach(e=>e.remove());
+  function addLabel(angle,text,color){
+    const midA=angle;
+    const lx=cx+(r*0.65)*Math.sin(midA),ly=cy-(r*0.65)*Math.cos(midA);
+    const t=document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('class','pie-label-t');
+    t.setAttribute('x',lx);t.setAttribute('y',ly+4);
+    t.setAttribute('text-anchor','middle');t.setAttribute('font-size','12');
+    t.setAttribute('font-weight','700');t.setAttribute('fill','#fff');
+    t.setAttribute('font-family','Arial');
+    t.textContent=text;
+    svg.appendChild(t);
+  }
+  if(m>0)addLabel(mAngle/2,(m/total*100).toFixed(2)+'%','#fff');
+  if(f>0)addLabel(mAngle+(2*Math.PI-mAngle)/2,(f/total*100).toFixed(2)+'%','#fff');
+}
+
+function renderDistBars(){
+  const el=document.getElementById('dist-bars');
+  if(!voters.length){el.innerHTML='<p style="font-size:12px;color:#9ca3af;text-align:center;padding:20px 0;">ডেটা নেই</p>';return;}
+  const c={};voters.forEach(v=>{c[v.district]=(c[v.district]||0)+1;});
+  const sorted=Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const max=sorted[0][1];
+  el.innerHTML=sorted.map(([d,n],i)=>`
+    <div class="dbar-row">
+      <div class="dbar-label">${d}</div>
+      <div class="dbar-track" style="background:#f1f5f9;">
+        <div class="dbar-fill" style="width:${(n/max*100).toFixed(0)}%;background:${BAR_COLORS[i%BAR_COLORS.length]};"></div>
+      </div>
+      <div class="dbar-pct">${(n/voters.length*100).toFixed(2)}%</div>
+    </div>`).join('');
+}
+
+// ===== DROPDOWNS =====
+function dUpa(){popUpa('d-district','d-upazila',true);}
+function sUpa(){popUpa('s-district','s-upazila',true);sUnion();}
+function popSelect(selId,list,allLabel){
+  document.getElementById(selId).innerHTML=`<option value="">${allLabel}</option>`+list.map(x=>`<option>${x}</option>`).join('');
+}
+function sUnion(){
+  const d=document.getElementById('s-district').value, u=document.getElementById('s-upazila').value;
+  const list=[...new Set(voters.filter(v=>(!d||v.district===d)&&(!u||v.upazila===u)).map(v=>v.union))].filter(Boolean).sort();
+  popSelect('s-union',list,'সব ইউনিয়ন');
+  sArea();
+}
+function sArea(){
+  const d=document.getElementById('s-district').value, u=document.getElementById('s-upazila').value, un=document.getElementById('s-union').value;
+  const list=[...new Set(voters.filter(v=>(!d||v.district===d)&&(!u||v.upazila===u)&&(!un||v.union===un)).map(v=>v.areaName))].filter(Boolean).sort();
+  popSelect('s-area',list,'সব এলাকা');
+}
+function aUpa(){
+  const d=document.getElementById('a-district').value;
+  const u=document.getElementById('a-upazila');
+  u.innerHTML='<option value="">উপজেলা নির্বাচন করুন</option>'+(UPAZILA[d]||[]).map(x=>`<option>${x}</option>`).join('');
+}
+function popUpa(distId,upaId,fromData){
+  const d=document.getElementById(distId)?.value||'';
+  const list=fromData?[...new Set(voters.filter(v=>!d||v.district===d).map(v=>v.upazila))].filter(Boolean).sort():(UPAZILA[d]||[]);
+  document.getElementById(upaId).innerHTML='<option value="">সব উপজেলা</option>'+list.map(u=>`<option>${u}</option>`).join('');
+}
+function refreshSearchDropdowns(){
+  const dists=[...new Set(voters.map(v=>v.district))].filter(Boolean).sort();
+  document.getElementById('s-district').innerHTML='<option value="">সব জেলা</option>'+dists.map(d=>`<option>${d}</option>`).join('');
+  sUnion();
+}
+
+// ===== SEARCH =====
+function filterV(name,father,mother,dist,upa,gen,dob,vid,union,area){
+  return voters.filter(v=>
+    (!name||v.name.toLowerCase().includes(name.toLowerCase()))&&
+    (!father||(v.father||'').toLowerCase().includes(father.toLowerCase()))&&
+    (!mother||(v.mother||'').toLowerCase().includes(mother.toLowerCase()))&&
+    (!dist||v.district===dist)&&(!upa||v.upazila===upa)&&
+    (!union||v.union===union)&&(!area||v.areaName===area)&&
+    (!gen||v.gender===gen)&&(!dob||v.dob===dob)&&
+    (!vid||(v.vid||'').includes(vid)));
+}
+function buildRows(rows,offset=0){
+  return rows.map((v,i)=>`<tr>
+    <td>${i+1+offset}</td><td><b>${v.name}</b></td><td>${v.father||'-'}</td>
+    <td>${v.mother||'-'}</td><td>${v.dob||'-'}</td><td>${v.district||'-'}</td>
+    <td>${v.upazila||'-'}</td><td>${v.center||'-'}</td>
+    <td><button class="btn-detail" onclick="showModal(${v.id})">বিস্তারিত দেখুন</button></td>
+  </tr>`).join('');
+}
+function doSearch(){
+  const r=filterV(document.getElementById('d-name').value,document.getElementById('d-father').value,
+    document.getElementById('d-mother').value,document.getElementById('d-district').value,
+    document.getElementById('d-upazila').value,'',document.getElementById('d-dob').value,'');
+  document.getElementById('res-count').textContent=r.length+' জন';
+  const show=r.slice(0,10);
+  document.getElementById('res-tbody').innerHTML=show.length?buildRows(show):'<tr><td colspan="9" style="text-align:center;padding:24px;color:#9ca3af;">কোনো ফলাফল নেই</td></tr>';
+  const sm=document.getElementById('see-more');
+  sm.innerHTML=r.length>10?`<button class="btn-more" onclick="gotoPage('search',document.querySelectorAll('.sb-item')[4])">আরও দেখুন →</button>`:'';
+}
+function resetSearch(){
+  ['d-name','d-father','d-mother','d-dob'].forEach(id=>document.getElementById(id).value='');
+  ['d-district','d-upazila'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('res-tbody').innerHTML='<tr><td colspan="9" style="text-align:center;padding:24px;color:#9ca3af;">অনুসন্ধান করুন</td></tr>';
+  document.getElementById('res-count').textContent='';
+  document.getElementById('see-more').innerHTML='';
+}
+function doAdvSearch(){
+  const r=filterV(document.getElementById('s-name').value,document.getElementById('s-father').value,
+    document.getElementById('s-mother').value,document.getElementById('s-district').value,
+    document.getElementById('s-upazila').value,document.getElementById('s-gender').value,
+    document.getElementById('s-dob').value,document.getElementById('s-vid').value,
+    document.getElementById('s-union').value,document.getElementById('s-area').value);
+  advResults=r;
+  document.getElementById('adv-count').textContent=r.length+' জন';
+  document.getElementById('adv-tbody').innerHTML=r.length?buildRows(r,0):'<tr><td colspan="9" style="text-align:center;padding:24px;color:#9ca3af;">কোনো ফলাফল নেই</td></tr>';
+}
+function resetAdv(){
+  ['s-name','s-father','s-mother','s-dob','s-vid'].forEach(id=>document.getElementById(id).value='');
+  ['s-district','s-upazila','s-union','s-area','s-gender'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('adv-tbody').innerHTML='<tr><td colspan="9" style="text-align:center;padding:24px;color:#9ca3af;">অনুসন্ধান করুন</td></tr>';
+  document.getElementById('adv-count').textContent='';
+  advResults=[];
+}
+
+// ===== MODAL =====
+function showModal(id){
+  const v=voters.find(x=>x.id===id);if(!v)return;
+  document.getElementById('modal-body').innerHTML=`
+    <div class="voter-ava">${v.gender==='পুরুষ'?'👨':'👩'}</div>
+    <div style="text-align:center;margin-bottom:14px;">
+      <div style="font-size:18px;font-weight:800;color:#1a2d4d;">${v.name}</div>
+      <span class="${v.gender==='পুরুষ'?'badge-m':'badge-f'}" style="margin-top:6px;display:inline-block;">${v.gender}</span>
+    </div>
+    ${[['ক্রমিক নং',v.serial],['ভোটার আইডি',v.vid||'N/A'],['পিতার নাম',v.father||'-'],['মাতার নাম',v.mother||'-'],
+       ['জন্ম তারিখ',v.dob||'-'],['পেশা',v.occupation],['জেলা',v.district||'-'],['উপজেলা',v.upazila||'-'],
+       ['ইউনিয়ন/ওয়ার্ড',v.union],['ওয়ার্ড নং',v.ward],['এলাকা নং',v.areaNo],['এলাকার নাম',v.areaName],
+       ['ঠিকানা',v.address],['কেন্দ্র নং',v.center||'-']]
+      .filter(([l,val])=>val!==undefined&&val!=='')
+      .map(([l,val])=>`<div class="det-row"><span class="det-l">${l}</span><span class="det-v">${val}</span></div>`).join('')}
+    <div class="modal-btns">
+      <button class="btn-del" onclick="delVoter(${v.id})">🗑️ মুছুন</button>
+      <button class="btn-cls2" onclick="closeModal()">✓ বন্ধ করুন</button>
+    </div>`;
+  document.getElementById('modal').classList.remove('hidden');
+}
+function closeModal(){document.getElementById('modal').classList.add('hidden');}
+function delVoter(id){
+  if(!confirm('এই ভোটার মুছে ফেলবেন?'))return;
+  voters=voters.filter(v=>v.id!==id);save();closeModal();
+  doSearch();doAdvSearch();
+  addLog('ভোটার মুছে ফেলা হয়েছে');
+  toast('মুছে ফেলা হয়েছে');
+}
+
+// ===== ADD VOTER =====
+function addVoter(){
+  const n=document.getElementById('a-name').value.trim();
+  const f=document.getElementById('a-father').value.trim();
+  const mo=document.getElementById('a-mother').value.trim();
+  const dob=document.getElementById('a-dob').value.trim();
+  const gen=document.getElementById('a-gender').value;
+  const dist=document.getElementById('a-district').value;
+  const upa=document.getElementById('a-upazila').value;
+  const cen=document.getElementById('a-center').value.trim();
+  const vid=document.getElementById('a-vid').value.trim();
+  if(!n||!f||!mo||!dob||!gen||!dist||!cen){toast('⚠️ সব বাধ্যতামূলক তথ্য দিন');return;}
+  const newV={id:Date.now()+Math.random(),name:n,father:f,mother:mo,dob,gender:gen,district:dist,upazila:upa,center:cen,vid:vid||'BD-'+Math.random().toString(36).substr(2,10).toUpperCase()};
+  voters.push(newV);save();clearAdd();
+  addLog(`নতুন ভোটার যোগ: ${n}`);
+  toast('✅ ভোটার সফলভাবে যোগ হয়েছে');
+  gotoPage('dashboard',document.querySelectorAll('.sb-item')[0]);
+}
+function clearAdd(){['a-name','a-father','a-mother','a-dob','a-center','a-vid'].forEach(id=>document.getElementById(id).value='');['a-gender','a-district','a-upazila'].forEach(id=>document.getElementById(id).value='');}
+
+// ===== PDF =====
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+function onPdfDrop(e){e.preventDefault();document.getElementById('pdfZone').classList.remove('drag');const f=e.dataTransfer.files[0];if(f)loadPdf(f);}
+function onPdfFile(e){const f=e.target.files[0];if(f)loadPdf(f);}
+
+async function loadPdf(file){
+  const pw=document.getElementById('pdf-prog-wrap');
+  const pf=document.getElementById('pdf-prog-fill');
+  const pm=document.getElementById('pdf-prog-msg');
+  const al=document.getElementById('pdf-alert');
+  pw.classList.remove('hidden'); al.classList.add('hidden');
+  document.getElementById('pdf-view-card').classList.add('hidden');
+
+  try{
+    pm.textContent='ফাইল পড়া হচ্ছে...'; pf.style.width='15%';
+    const buf=await file.arrayBuffer();
+    pf.style.width='45%'; pm.textContent='PDF প্রক্রিয়া হচ্ছে...';
+    pdfDocObj=await pdfjsLib.getDocument({data:buf}).promise;
+    pdfCurPage=1;
+    pf.style.width='75%'; pm.textContent=`${pdfDocObj.numPages}টি পৃষ্ঠা পাওয়া গেছে। রেন্ডার হচ্ছে...`;
+    document.getElementById('pdf-view-card').classList.remove('hidden');
+    await renderPdfPage(pdfCurPage);
+    updatePdfNav();
+    pf.style.width='100%';
+
+    al.className='alert-success';
+    al.innerHTML=`✅ PDF লোড সম্পন্ন। ${pdfDocObj.numPages}টি পৃষ্ঠা পাওয়া গেছে। ভোটার ডেটা যোগ করতে voter_extractor.py দিয়ে Excel বানিয়ে "ডেটা এক্সপোর্ট" পাতা থেকে আমদানি করুন।`;
+    al.classList.remove('hidden');
+
+    addLog(`PDF প্রিভিউ: ${file.name} — ${pdfDocObj.numPages} পৃষ্ঠা`);
+  }catch(err){
+    pf.style.background='#dc2626';
+    al.className='alert-error';
+    al.textContent='ত্রুটি: '+err.message;
+    al.classList.remove('hidden');
+  }
+}
+
+async function renderPdfPage(num){
+  const pg=await pdfDocObj.getPage(num);
+  const wrap=document.querySelector('.pdf-canvas-box');
+  const maxW=wrap.clientWidth-20||600;
+  const vp=pg.getViewport({scale:1});
+  const scale=Math.min(maxW/vp.width,2);
+  const vp2=pg.getViewport({scale});
+  const canvas=document.getElementById('pdfCanvas');
+  const ctx=canvas.getContext('2d');
+  canvas.width=vp2.width; canvas.height=vp2.height;
+  await pg.render({canvasContext:ctx,viewport:vp2}).promise;
+  document.getElementById('pdf-page-lbl').textContent=`পৃষ্ঠা ${num} / ${pdfDocObj.numPages}`;
+}
+async function pdfPrev(){if(pdfCurPage>1){pdfCurPage--;await renderPdfPage(pdfCurPage);updatePdfNav();}}
+async function pdfNext(){if(pdfDocObj&&pdfCurPage<pdfDocObj.numPages){pdfCurPage++;await renderPdfPage(pdfCurPage);updatePdfNav();}}
+function updatePdfNav(){
+  document.getElementById('pdf-prev-btn').disabled=pdfCurPage<=1;
+  document.getElementById('pdf-next-btn').disabled=!pdfDocObj||pdfCurPage>=pdfDocObj.numPages;
+}
+
+// ===== EXCEL IMPORT =====
+function onXlsDrop(e){e.preventDefault();const f=e.dataTransfer.files[0];if(f)processXls(f);}
+function onXlsFile(e){const f=e.target.files[0];if(f)processXls(f);}
+function processXls(file){
+  const pw=document.getElementById('xls-prog-wrap'),pf=document.getElementById('xls-prog-fill');
+  const pm=document.getElementById('xls-prog-msg'),al=document.getElementById('xls-alert');
+  pw.classList.remove('hidden');al.classList.add('hidden');
+  pf.style.width='20%';pm.textContent='ফাইল পড়া হচ্ছে...';
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      pf.style.width='60%';pm.textContent='ডেটা প্রক্রিয়া হচ্ছে...';
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
+      let added=0,skip=0;
+      rows.forEach(row=>{
+        const name=String(row['নাম (বাংলা)']||row['নাম']||'').trim();
+        const dist=String(row['জেলা']||'').trim();
+        if(!name||!dist){skip++;return;}
+        const areaNo=String(row['এলাকা নং']||'').trim();
+        const areaName=String(row['এলাকার নাম']||'').trim();
+        voters.push({id:Date.now()+Math.random(),name,
+          serial:String(row['ক্রমিক নং']||row['ক্রমিক']||'').trim(),
+          father:String(row['পিতার নাম']||'').trim(),
+          mother:String(row['মাতার নাম']||'').trim(),
+          occupation:String(row['পেশা']||'').trim(),
+          dob:String(row['জন্ম তারিখ (DD-MM-YYYY)']||row['জন্ম তারিখ']||'').trim(),
+          gender:String(row['লিঙ্গ (পুরুষ/মহিলা)']||row['লিঙ্গ']||'').trim(),
+          district:dist,
+          pourashava:String(row['পৌরসভা']||'').trim(),
+          upazila:String(row['উপজেলা']||'').trim(),
+          union:String(row['ইউনিয়ন/ওয়ার্ড']||row['ইউনিয়ন']||'').trim(),
+          ward:String(row['ওয়ার্ড নং']||row['ওয়ার্ড']||'').trim(),
+          areaNo,areaName,
+          address:String(row['ঠিকানা']||'').trim(),
+          center:String(row['কেন্দ্র নং']||areaNo||areaName||'').trim(),
+          vid:String(row['ভোটার আইডি']||row['ভোটার নং']||'').trim()||('BD-'+Math.random().toString(36).substr(2,10).toUpperCase())});
+        added++;
+      });
+      save();pf.style.width='100%';
+      al.className='alert-success';
+      al.innerHTML=`✅ ${added} জন ভোটার সফলভাবে আমদানি হয়েছে।${skip?` (${skip}টি সারি এড়ানো)`:''} `;
+      al.classList.remove('hidden');
+      addLog(`Excel আমদানি: ${added} ভোটার`);
+      toast(`✅ ${added} জন আমদানি সম্পন্ন`);
+    }catch(err){pm.textContent='ত্রুটি: '+err.message;pf.style.background='#dc2626';}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ===== EXPORT =====
+function expExcel(){
+  if(!voters.length){toast('কোনো ডেটা নেই');return;}
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.json_to_sheet(voters.map((v,i)=>({'ক্রমিক নং':i+1,'নাম':v.name,'পিতার নাম':v.father,'মাতার নাম':v.mother,'জন্ম তারিখ':v.dob,'জেলা':v.district,'উপজেলা':v.upazila,'কেন্দ্র নং':v.center,'লিঙ্গ':v.gender,'ভোটার আইডি':v.vid})));
+  ws['!cols']=Array(10).fill({wch:20});
+  XLSX.utils.book_append_sheet(wb,ws,'Voter Data');
+  XLSX.writeFile(wb,'voter_data_'+Date.now()+'.xlsx');
+  toast('📊 Excel ডাউনলোড হচ্ছে...');
+}
+function expCSV(){
+  if(!voters.length){toast('কোনো ডেটা নেই');return;}
+  const h=['#','নাম','পিতার নাম','মাতার নাম','জন্ম তারিখ','জেলা','উপজেলা','কেন্দ্র নং','লিঙ্গ','ভোটার আইডি'];
+  const rows=voters.map((v,i)=>[i+1,v.name,v.father,v.mother,v.dob,v.district,v.upazila,v.center,v.gender,v.vid].join(','));
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(h.join(',')+'\n'+rows.join('\n'));
+  a.download='voter_data.csv';a.click();toast('📝 CSV ডাউনলোড...');
+}
+function expPDF(){
+  if(!voters.length){toast('কোনো ডেটা নেই');return;}
+  printVoterList(voters,'বাংলাদেশ ভোটার তথ্য রিপোর্ট');
+}
+function printAdvResults(){
+  if(!advResults.length){toast('⚠️ আগে অনুসন্ধান করুন');return;}
+  printVoterList(advResults,'ভোটার তালিকা — অনুসন্ধান ফলাফল');
+  addLog(`ফলাফল প্রিন্ট: ${advResults.length} ভোটার`);
+}
+function printVoterList(list,title){
+  const m=list.filter(v=>v.gender==='পুরুষ').length;
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${title}</title>
+  <style>body{font-family:Arial;padding:20px;font-size:11px;}h1{color:#1a2d4d;font-size:16px;text-align:center;margin-bottom:4px;}
+  .sub{text-align:center;font-size:11px;color:#888;margin-bottom:12px;}
+  .stats{display:flex;gap:10px;justify-content:center;margin-bottom:14px;}
+  .s{border:1px solid #ddd;border-radius:6px;padding:10px 20px;text-align:center;}
+  .s p{font-size:20px;font-weight:800;color:#1a2d4d;margin:0;}.s small{font-size:9px;color:#888;}
+  table{width:100%;border-collapse:collapse;}th{background:#1a2d4d;color:#fff;padding:7px 8px;font-size:10px;}
+  td{padding:6px 8px;border-bottom:1px solid #eee;font-size:10px;}tr:nth-child(even){background:#f8fafc;}
+  </style></head><body>
+  <h1>${title}</h1>
+  <div class="sub">মুদ্রণ তারিখ: ${new Date().toLocaleDateString('bn-BD')}</div>
+  <div class="stats"><div class="s"><p>${list.length}</p><small>মোট ভোটার</small></div>
+  <div class="s"><p>${m}</p><small>পুরুষ</small></div><div class="s"><p>${list.length-m}</p><small>মহিলা</small></div></div>
+  <table><thead><tr><th>#</th><th>নাম</th><th>পিতার নাম</th><th>মাতার নাম</th><th>জন্ম তারিখ</th><th>জেলা</th><th>উপজেলা</th><th>ইউনিয়ন</th><th>এলাকা</th><th>লিঙ্গ</th><th>ভোটার আইডি</th></tr></thead>
+  <tbody>${list.map((v,i)=>`<tr><td>${i+1}</td><td>${v.name}</td><td>${v.father||'-'}</td><td>${v.mother||'-'}</td><td>${v.dob||'-'}</td><td>${v.district}</td><td>${v.upazila||'-'}</td><td>${v.union||'-'}</td><td>${v.areaName||v.center||'-'}</td><td>${v.gender}</td><td>${v.vid||'-'}</td></tr>`).join('')}</tbody></table>
+  <p style="text-align:center;color:#9ca3af;font-size:9px;margin-top:14px;">© Bangladesh Election Commission</p>
+  <script>window.print();window.onafterprint=()=>window.close();<\/script></body></html>`);
+  w.document.close();
+}
+function dlTemplate(){
+  const h=['ক্রমিক নং','নাম (বাংলা)','পিতার নাম','মাতার নাম','জন্ম তারিখ (DD-MM-YYYY)','জেলা','উপজেলা','কেন্দ্র নং','লিঙ্গ (পুরুষ/মহিলা)','ভোটার আইডি'];
+  const s=[[1,'মোঃ আব্দুল করিম','মোঃ রহমান মিয়া','মোছাঃ আয়েশা খাতুন','01-01-1985','ঢাকা','সাভার',105,'পুরুষ','BD-1234567890'],[2,'মোছাঃ ফাতেমা বেগম','মোঃ আলী হোসেন','মোছাঃ রহিমা বেগম','15-06-1992','চট্টগ্রাম','হাটহাজারী',201,'মহিলা','BD-0987654321']];
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet([h,...s]);
+  ws['!cols']=Array(10).fill({wch:22});
+  XLSX.utils.book_append_sheet(wb,ws,'Voter Data');
+  XLSX.writeFile(wb,'voter_import_template.xlsx');
+  toast('📋 টেমপ্লেট ডাউনলোড...');
+}
+
+// ===== MISC PAGES =====
+function renderDistList(){
+  const c={};voters.forEach(v=>{c[v.district]=(c[v.district]||0)+1;});
+  document.getElementById('dist-list').innerHTML=Object.keys(c).length?
+    Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([d,n])=>`<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f3f4f6;font-size:13px;"><b>${d}</b><span class="badge-m">${n} জন</span></div>`).join(''):
+    '<p style="font-size:12px;color:#9ca3af;">ডেটা নেই</p>';
+}
+function renderUpaList(){
+  const c={};voters.forEach(v=>{const k=`${v.upazila} (${v.district})`;c[k]=(c[k]||0)+1;});
+  document.getElementById('upa-list').innerHTML=Object.keys(c).length?
+    Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([u,n])=>`<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f3f4f6;font-size:13px;"><b>${u}</b><span class="badge-m">${n} জন</span></div>`).join(''):
+    '<p style="font-size:12px;color:#9ca3af;">ডেটা নেই</p>';
+}
+function renderCenList(){
+  const c={};voters.forEach(v=>{const k=`কেন্দ্র ${v.center} — ${v.district}`;c[k]=(c[k]||0)+1;});
+  document.getElementById('cen-list').innerHTML=Object.keys(c).length?
+    Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f3f4f6;font-size:13px;"><b>${k}</b><span class="badge-m">${n} জন</span></div>`).join(''):
+    '<p style="font-size:12px;color:#9ca3af;">ডেটা নেই</p>';
+}
+function renderReport(){
+  const el=document.getElementById('report-body');
+  if(!voters.length){el.innerHTML='<p style="font-size:12px;color:#9ca3af;">ডেটা নেই</p>';return;}
+  const dc={};voters.forEach(v=>{dc[v.district]=(dc[v.district]||0)+1;});
+  const sorted=Object.entries(dc).sort((a,b)=>b[1]-a[1]);
+  const m=voters.filter(v=>v.gender==='পুরুষ').length;
+  el.innerHTML=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">
+    <div style="background:#eff6ff;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:10px;color:#6b7280;">মোট ভোটার</div><div style="font-size:24px;font-weight:800;color:#1a2d4d;">${voters.length}</div></div>
+    <div style="background:#f0fdf4;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:10px;color:#6b7280;">পুরুষ</div><div style="font-size:24px;font-weight:800;color:#166534;">${m}</div></div>
+    <div style="background:#fdf2f8;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:10px;color:#6b7280;">মহিলা</div><div style="font-size:24px;font-weight:800;color:#be185d;">${voters.length-m}</div></div>
+  </div>
+  <div style="font-weight:700;font-size:13px;color:#1a2d4d;margin-bottom:10px;">জেলা ভিত্তিক:</div>
+  ${sorted.map(([d,n],i)=>`<div class="dbar-row"><div class="dbar-label">${d}</div><div class="dbar-track"><div class="dbar-fill" style="width:${(n/sorted[0][1]*100).toFixed(0)}%;background:${BAR_COLORS[i%BAR_COLORS.length]};"></div></div><div class="dbar-pct">${(n/voters.length*100).toFixed(1)}%</div></div>`).join('')}`;
+}
+function renderLogs(){
+  document.getElementById('logs-body').innerHTML=logs.length?
+    logs.slice(0,50).map(l=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:12px;"><span>${l.m}</span><span style="color:#9ca3af;font-size:10px;">${l.t}</span></div>`).join(''):
+    '<p style="font-size:12px;color:#9ca3af;">কোনো লগ নেই</p>';
+}
+
+// ===== TOAST =====
+let tt;
+function toast(msg){
+  clearTimeout(tt);
+  const el=document.getElementById('toast-el');
+  el.textContent=msg;el.classList.remove('hidden');
+  tt=setTimeout(()=>el.classList.add('hidden'),3000);
+}
+
+// ===== DATE =====
+function setDate(){
+  const now=new Date();
+  const bn={0:'রবিবার',1:'সোমবার',2:'মঙ্গলবার',3:'বুধবার',4:'বৃহস্পতিবার',5:'শুক্রবার',6:'শনিবার'};
+  const months={0:'জানুয়ারি',1:'ফেব্রুয়ারি',2:'মার্চ',3:'এপ্রিল',4:'মে',5:'জুন',6:'জুলাই',7:'আগস্ট',8:'সেপ্টেম্বর',9:'অক্টোবর',10:'নভেম্বর',11:'ডিসেম্বর'};
+  document.getElementById('tb-date1').textContent=`${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+  const h=now.getHours(),m=String(now.getMinutes()).padStart(2,'0');
+  document.getElementById('tb-date2').textContent=`${bn[now.getDay()]}, ${h>12?h-12:h}:${m} ${h>=12?'PM':'AM'}`;
+}
+
+// ===== INIT =====
+setDate();
+refreshDash();
+addLog('সিস্টেম চালু হয়েছে');
+</script>
+</body>
+</html>
