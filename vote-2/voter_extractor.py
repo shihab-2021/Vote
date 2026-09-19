@@ -1,18 +1,30 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-বাংলাদেশ ভোটার তালিকা PDF এক্সট্রাক্টর v2.0
-===============================================
-৩-কলাম ভোটার বক্স ফরম্যাট সাপোর্ট করে।
+r"""
+বাংলাদেশ ভোটার তালিকা PDF এক্সট্রাক্টর v2.5 (Grid & Unicode CMap Fixed)
+==================================================================
+৩-কলাম ভোটার বক্স গ্রিড লেআউট এবং বাংলা ফন্ট সিআইডি রিকভারি সাপোর্ট করে।
 
 ব্যবহার:
   python voter_extractor.py
-  python voter_extractor.py "F:\\চট্টগ্রাম-৬"
+  python voter_extractor.py "F:\চট্টগ্রাম-৬"
 """
 
 import os, sys, re, json, time, traceback
 from pathlib import Path
 from datetime import datetime
+
+# Windows UTF-8 Output support
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+if hasattr(sys.stderr, 'reconfigure'):
+    try:
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
 
 try:
     import pdfplumber
@@ -35,11 +47,42 @@ BATCH_SAVE   = 1000   # প্রতি ১০০০ ভোটারে চে�
 MAX_PER_FILE = 500000 # প্রতি Excel-এ সর্বোচ্চ ৫ লাখ
 
 # ──────────────────────────────────────────
-# ইউটিলিটি
+# বাংলা ফন্ট সিআইডি ও এনকোডিং ডিকশনারি
 # ──────────────────────────────────────────
-def clean(s):
-    if not s: return ""
-    return re.sub(r'\s+', ' ', str(s)).strip()
+CID_MAP = {
+    '(cid:140)': 'ন্ট',
+    '(cid:203)': '্যা', '(cid:206)': 'র্', '(cid:207)': 'ে', '(cid:208)': 'ৈ',
+    '(cid:209)': 'ু', '(cid:212)': 'ৌ', '(cid:229)': 'গ্র', '(cid:234)': 'ঙ্গ',
+    '(cid:239)': 'শ্চি', '(cid:251)': 'ঞ্চ', '(cid:255)': 'ট্ট', '(cid:275)': 'ত্ত',
+    '(cid:276)': 'ত্র', '(cid:279)': 'দ্দ', '(cid:290)': 'ন্ত', '(cid:292)': 'ন্দ',
+    '(cid:293)': 'ন্ম', '(cid:296)': 'ন্ন', '(cid:297)': 'ন্সী', '(cid:303)': 'ন্যা',
+    '(cid:304)': 'প্রাপ্ত', '(cid:306)': 'ল্লু', '(cid:308)': 'প্র', '(cid:314)': 'ব্দ',
+    '(cid:316)': 'ব্ব', '(cid:317)': 'ব্রা', '(cid:322)': 'ন্নে', '(cid:324)': 'ম্ব',
+    '(cid:327)': 'ম্ম', '(cid:332)': 'ল্লাহ', '(cid:340)': 'শ্চি', '(cid:344)': 'শ্র',
+    '(cid:350)': 'স্ট', '(cid:354)': 'স্ট্র', '(cid:360)': 'স্ট', '(cid:361)': 'স্ত',
+    '(cid:363)': 'চ্ছ', '(cid:369)': 'স্ত্রী', '(cid:381)': 'ছোল', '(cid:383)': 'নুর',
+    '(cid:384)': 'শামস', '(cid:385)': 'রু', '(cid:386)': 'ফজল', '(cid:387)': 'দুল',
+    '(cid:388)': 'ফুল', '(cid:389)': 'হৃদয়', '(cid:390)': 'জল', '(cid:398)': 'মেহের',
+    '(cid:414)': 'দ্দী', '(cid:419)': 'কুর',
+}
+
+def clean_text(text):
+    if not text: return ""
+    text = str(text)
+    for cid, val in CID_MAP.items():
+        text = text.replace(cid, val)
+    # Gashchi spelling fix
+    text = text.replace('গিশ্চি', 'গশ্চি').replace('গিেশ্চি', 'গশ্চি').replace('গিশ্চ', 'গশ্চি')
+    # Vowel reordering & Unicode normalization
+    text = re.sub(r'e([\u0980-\u09FF](?:\u09CD[\u0980-\u09FF])?)া', r'\1ো', text)
+    text = re.sub(r'ে([\u0980-\u09FF](?:\u09CD[\u0980-\u09FF])?)া', r'\1ো', text)
+    text = re.sub(r'ে([\u0980-\u09FF](?:\u09CD[\u0980-\u09FF])?)ৗ', r'\1ৌ', text)
+    text = re.sub(r'ে([\u0980-\u09FF](?:\u09CD[\u0980-\u09FF])?)', r'\1ে', text)
+    text = re.sub(r'ৈ([\u0980-\u09FF](?:\u09CD[\u0980-\u09FF])?)', r'\1ৈ', text)
+    text = re.sub(r'ি([\u0980-\u09FF](?:\u09CD[\u0980-\u09FF])?)', r'\1ি', text)
+    text = text.replace('\u25cc', '')
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
 
 def bn2en(s):
     s = str(s)
@@ -48,174 +91,159 @@ def bn2en(s):
     return s
 
 def norm_date(s):
-    s = bn2en(str(s)).strip()
-    m = re.search(r'(\d{1,2})[/\-\.](\d{1,2})[/\-\.](\d{4})', s)
+    s = clean_text(s)
+    m = re.search(r'([০-৯\d]{1,2})[/\-\.]([০-৯\d]{1,2})[/\-\.]([০-৯\d]{2,4})', s)
     if m:
-        return f"{m.group(1).zfill(2)}/{m.group(2).zfill(2)}/{m.group(3)}"
-    return s
-
-def get_field(text, *keys):
-    """একাধিক কীওয়ার্ড দিয়ে ভ্যালু বের করে"""
-    for key in keys:
-        idx = text.find(key)
-        if idx == -1: continue
-        rest = text[idx + len(key):].lstrip(' :।\t')
-        val  = rest.split('\n')[0].strip()
-        if val and len(val) > 0:
-            return clean(val)
+        d, m_val, y = bn2en(m.group(1)), bn2en(m.group(2)), bn2en(m.group(3))
+        if len(y) == 2: y = "19" + y
+        return f"{d.zfill(2)}/{m_val.zfill(2)}/{y}"
     return ""
 
 # ──────────────────────────────────────────
 # পেজ ১ — কেন্দ্র মেটা
 # ──────────────────────────────────────────
-def parse_page1(text):
+def parse_page1(page, folder_meta=None):
+    words = page.extract_words()
     meta = {}
-    meta['জেলা']       = get_field(text, 'জেলা:', 'জেলা :')
-    meta['উপজেলা']     = get_field(text, 'উপজেলা/থানা', 'উপজেলা')
-    meta['পৌরসভা']     = get_field(text, 'সিটি কর্পোরেশন/ পৌরসভা', 'পৌরসভা')
-    meta['ইউনিয়ন']    = get_field(text, 'ইউনিয়ন/পৌর ওয়ার্ড/\nক্যান্টনমেন্ট বোর্ড',
-                                         'ইউনিয়ন/', 'ইউনিয়ন')
-    meta['ওয়ার্ড']    = bn2en(get_field(text, 'ওয়ার্ড নম্বর (ইউনিয়ন পরিষদের জন্য)',
-                                               'ওয়ার্ড নং', 'ওয়ার্ড নম্বর'))
-    meta['এলাকা_নং']  = bn2en(get_field(text, 'ভোটার এলাকার নম্বর', 'ভোটার এলাকার নখর'))
-    meta['এলাকা_নাম'] = get_field(text, 'ভোটার এলাকা\n', 'ভোটার এলাকার নাম', 'ভোটার এলাকা')
+    
+    full_text = clean_text(page.extract_text() or '')
+    if 'মহিলা' in full_text[:600]: meta['লিঙ্গ'] = 'মহিলা'
+    elif 'পুরুষ' in full_text[:600]: meta['লিঙ্গ'] = 'পুরুষ'
+    
+    for w in words:
+        top = w['top']
+        x0 = w['x0']
+        txt = clean_text(w['text'])
+        if not txt: continue
+        
+        # Upazila: top ~ 304, x0 ~ 200
+        if 290 < top < 320 and 190 <= x0 < 380:
+            if 'উপজেলা' not in txt:
+                meta['উপজেলা'] = meta.get('উপজেলা', '') + ' ' + txt
+                
+        # Union: top ~ 325..365, x0 ~ 190..380
+        elif 325 < top < 365 and 190 <= x0 < 380:
+            if 'ইউনিয়ন' not in txt and 'ক্যান্টনমেন্ট' not in txt and 'বোর্ড' not in txt and 'পৌর' not in txt and 'ওয়ার্ড' not in txt:
+                meta['ইউনিয়ন'] = meta.get('ইউনিয়ন', '') + ' ' + txt
+                
+        # Area Name: top ~ 375..405, x0 ~ 190..380
+        elif 375 < top < 405 and 190 <= x0 < 380:
+            meta['এলাকা_নাম'] = meta.get('এলাকা_নাম', '') + ' ' + txt
+            
+        # Area No: top ~ 410..435, x0 ~ 190..380
+        elif 410 < top < 435 and 190 <= x0 < 380:
+            meta['এলাকা_নং'] = meta.get('এলাকা_নং', '') + ' ' + txt
+            
+        # District: top ~ 225..250, x0 > 420
+        elif 225 < top < 250 and x0 > 420:
+            if 'জেলা' not in txt:
+                meta['জেলা'] = meta.get('জেলা', '') + ' ' + txt
+                
+        # Ward No: top ~ 340..365, x0 > 620
+        elif 340 < top < 365 and x0 > 620:
+            meta['ওয়ার্ড'] = meta.get('ওয়ার্ড', '') + ' ' + txt
 
-    # ওয়ার্ড / এলাকা নং থেকে শুধু সংখ্যা নাও
-    for k in ['ওয়ার্ড', 'এলাকা_নং']:
-        m = re.search(r'\d+', meta.get(k, ''))
-        if m: meta[k] = m.group()
+    for k in meta:
+        meta[k] = clean_text(meta[k])
 
-    # লিঙ্গ
-    if 'মহিলা' in text[:600]:
-        meta['লিঙ্গ'] = 'মহিলা'
-    elif 'পুরুষ' in text[:600]:
-        meta['লিঙ্গ'] = 'পুরুষ'
-    else:
-        meta['লিঙ্গ'] = ''
+    # Fallbacks if metadata missing
+    if not meta.get('ইউনিয়ন') and folder_meta and folder_meta.get('_union_folder'):
+        meta['ইউনিয়ন'] = folder_meta['_union_folder']
+    if not meta.get('উপজেলা') and folder_meta and folder_meta.get('_upazila_folder'):
+        meta['উপজেলা'] = folder_meta['_upazila_folder']
 
-    return {k: v for k, v in meta.items() if v}
-
+    return meta
 
 # ──────────────────────────────────────────
-# ভোটার ব্লক পার্সার
+# ভোটার বক্স পার্সার
 # ──────────────────────────────────────────
-def parse_one_block(block, meta):
-    """একটা ভোটার ব্লক (টেক্সট) থেকে dict বানায়"""
-    v = {}
+def post_process_record(v):
+    for field in ['নাম', 'পিতা', 'মাতা', 'পেশা', 'ঠিকানা', 'ইউনিয়ন', 'উপজেলা', 'জেলা', 'এলাকা_নাম']:
+        val = v.get(field, '')
+        if not val: continue
+        val = str(val)
 
-    # ক্রমিক নং — ব্লকের শুরুতে ৪-৫ ডিজিট
-    m = re.match(r'\s*(\d{4,5})', block)
-    v['ক্রমিক'] = m.group(1) if m else ''
+        val = val.replace('(cid:259)', '').replace('(cid:281)', 'ঞ্চ').replace('(cid:217)', 'ক্ষ')
+        val = val.replace('(cid:245)', 'জাফ').replace('(cid:253)', 'নজু')
 
-    v['নাম']         = clean(get_field(block, 'নাম:','নাম :','নাম'))
-    v['ভোটার_নং']   = clean(bn2en(get_field(block,
-                                'ভোটার নং:', 'ভোটার নখর:', 'ভোটার নম্বর:', 'ভোটার নং')))
-    v['পিতা']        = clean(get_field(block, 'পিতা:', 'পিতা :'))
-    v['মাতা']        = clean(get_field(block, 'মাতা:', 'মাতা :'))
+        val = val.replace('মেভাহাম্মদ', 'মোহাম্মদ').replace('মভাহাম্মদ', 'মোহাম্মদ').replace('মভাহাদ্দ', 'মোহাম্মদ')
+        val = val.replace('মেভাঃ', 'মোঃ').replace('মেভা', 'মোঃ')
+        val = val.replace('মোজাফাফর', 'মোজাফফর').replace('মোজাফাফৰ', 'মোজাফফর')
+        val = val.replace('ইউশামসপ', 'ইউসুফ').replace('ইউসপ', 'ইউসুফ').replace('ইউশফ', 'ইউসুফ')
+        val = val.replace('রিফক', 'রফিক').replace('আেবদীন', 'আবেদীন')
+        val = val.replace('স ালমা', 'সালমা').replace('মনজুুরা', 'মনজূরা').replace('কুরলছুমা', 'কুলছুম')
+        val = val.replace('আবদুলল', 'আব্দুল').replace('ল্লাহাহ', 'ল্লাহ')
+        val = val.replace('নুররুল', 'নুরুল').replace('নুরর', 'নুর')
+        val = val.replace('অন্যাান্যা', 'অন্যান্য').replace('অন্যাান্য', 'অন্যান্য').replace('অন্যানা', 'অন্যান্য')
+        val = val.replace('ব্যাবসা', 'ব্যবসা').replace('চাকুররী', 'চাকুরী')
 
-    # পেশা ও জন্ম তারিখ — প্রায়ই একই লাইনে
-    # "পেশা: গৃহিণী,জন্ম তারিখ:০৪/০১/১৯৫২"
-    m2 = re.search(
-        r'পেশা\s*[:\s।]+([^,\n]+)[,\s]*জন্ম\s*তারিখ\s*[:\s।]*([^\nঠ\r]+)',
-        block)
-    if m2:
-        v['পেশা']        = clean(m2.group(1))
-        v['জন্ম_তারিখ'] = norm_date(m2.group(2))
-    else:
-        v['পেশা']        = clean(get_field(block, 'পেশা:', 'পেশা :'))
-        dob = get_field(block, 'জন্ম তারিখ:', 'জন্ম তারিখ :')
-        v['জন্ম_তারিখ'] = norm_date(dob) if dob else ''
+        val = re.sub(r'\s+(?:স্ত|ন্ত|ত|র|া|ন|স)$', '', val)
+        val = re.sub(r'\s+', ' ', val).strip()
+        v[field] = val
 
-    # ঠিকানা
-    m3 = re.search(r'ঠিকানা\s*[:\s।]+(.+?)(?=\n\d{4,5}|\Z)', block, re.DOTALL)
-    v['ঠিকানা'] = clean(m3.group(1).replace('\n', ' ')) if m3 else ''
+    name = v.get('নাম', '')
+    if re.search(r'\s+(?:চু|চূ|চৌ)$', name):
+        name = re.sub(r'\s+(?:চু|চূ|চৌ)$', ' চৌধুরী', name)
+    v['নাম'] = name
 
-    # মেটা কপি
-    v['লিঙ্গ']      = meta.get('লিঙ্গ', '')
-    v['জেলা']       = meta.get('জেলা', '')
-    v['উপজেলা']     = meta.get('উপজেলা', '')
-    v['পৌরসভা']     = meta.get('পৌরসভা', '')
-    v['ইউনিয়ন']    = meta.get('ইউনিয়ন', '')
-    v['ওয়ার্ড']    = meta.get('ওয়ার্ড', '')
-    v['এলাকা_নং']  = meta.get('এলাকা_নং', '')
-    v['এলাকা_নাম'] = meta.get('এলাকা_নাম', '')
+    occ = v.get('পেশা', '')
+    if any(k in occ for k in ['পাশ্চী', 'পাদ্রী', 'পাদ্্রী', 'পাঞ্চী', 'পুরোহিত']):
+        v['পেশা'] = 'ইমাম/পুরোহিত/পাদ্রী'
+    elif 'ড্রাইভার' in occ or 'াইভার' in occ:
+        v['পেশা'] = 'ড্রাইভার'
+    elif 'শিক্ষক' in occ or 'শিঙ্ক' in occ:
+        v['পেশা'] = 'শিক্ষক'
 
     return v
 
+def parse_one_box(box_text, meta):
+    b = clean_text(box_text)
+    v = {}
+    
+    # Serial
+    m_sl = re.search(r'^\s*([\d০-৯]{4,5})', b)
+    v['ক্রমিক'] = bn2en(m_sl.group(1)) if m_sl else ''
+    
+    # Name
+    m_name = re.search(r'নাম\s*:\s*(.+?)(?=\s*ভোটার নং|\s*পিতা|\Z)', b)
+    name = m_name.group(1).strip() if m_name else ''
+    name = re.sub(r'[\d০-৯]{4,5}[\.\।]?$', '', name).strip()
+    v['নাম'] = name
+    
+    # Voter No
+    m_vno = re.search(r'ভোটার নং\s*:\s*([\d০-৯]+)', b)
+    v['ভোটার_নং'] = bn2en(m_vno.group(1).strip()) if m_vno else ''
+    
+    # Father
+    m_fat = re.search(r'পিতা\s*:\s*(.+?)(?=\s*মাতা|\Z)', b)
+    fat = m_fat.group(1).strip() if m_fat else ''
+    v['পিতা'] = re.sub(r'[\d০-৯]{4,5}[\.\।]?$', '', fat).strip()
+    
+    # Mother
+    m_mot = re.search(r'মাতা\s*:\s*(.+?)(?=\s*(?:পেশা|কপেশা|জন্ম|তারিখ|ঠিকানা)|\Z)', b)
+    mot = m_mot.group(1).strip() if m_mot else ''
+    v['মাতা'] = re.sub(r'[\d০-৯]{4,5}[\.\।]?$', '', mot).strip()
+    
+    # DOB
+    v['জন্ম_তারিখ'] = norm_date(b)
+    
+    # Occupation
+    m_occ = re.search(r'(?:পেশা|কপেশা)\s*:\s*([^,,\n]+)', b)
+    v['পেশা'] = m_occ.group(1).strip() if m_occ else ''
+    
+    # Address
+    m_add = re.search(r'ঠিকানা\s*:\s*(.+)', b)
+    v['ঠিকানা'] = m_add.group(1).strip() if m_add else ''
+    
+    # Copy metadata
+    for k in ['লিঙ্গ', 'জেলা', 'উপজেলা', 'পৌরসভা', 'ইউনিয়ন', 'ওয়ার্ড', 'এলাকা_নং', 'এলাকা_নাম']:
+        v[k] = meta.get(k, '')
+
+    v = post_process_record(v)
+    return v
 
 # ──────────────────────────────────────────
-# ৩-কলাম পেজ পার্সার  ← মূল উদ্ভাবন
-# ──────────────────────────────────────────
-def extract_3col_blocks(page):
-    """
-    pdfplumber দিয়ে প্রতিটা word-এর x স্থানাঙ্ক দেখে
-    পেজটাকে ৩টা ভার্টিক্যাল কলামে ভাগ করে আলাদা টেক্সট তোলে।
-    তারপর প্রতিটা কলামকে ভোটার ব্লকে ভাগ করে।
-    """
-    words = page.extract_words(x_tolerance=3, y_tolerance=3,
-                                keep_blank_chars=False,
-                                use_text_flow=False)
-    if not words:
-        # fallback — সাধারণ টেক্সট
-        return [page.extract_text() or ""]
-
-    # পেজ প্রস্থ
-    page_w = page.width
-
-    # কলাম সীমানা নির্ধারণ (মোটামুটি ১/৩, ২/৩)
-    c1_end = page_w * 0.36
-    c2_end = page_w * 0.67
-
-    # words → কলাম অনুযায়ী গ্রুপ
-    cols = {0: [], 1: [], 2: []}
-    for w in words:
-        xm = (w['x0'] + w['x1']) / 2
-        if xm < c1_end:
-            cols[0].append(w)
-        elif xm < c2_end:
-            cols[1].append(w)
-        else:
-            cols[2].append(w)
-
-    col_texts = []
-    for ci in range(3):
-        ws = cols[ci]
-        if not ws: continue
-        # y অনুযায়ী sort → লাইন বানাই
-        ws.sort(key=lambda w: (round(w['top'] / 5) * 5, w['x0']))
-        lines = []
-        cur_y  = None
-        cur_line = []
-        for w in ws:
-            y = round(w['top'] / 5) * 5
-            if cur_y is None or abs(y - cur_y) <= 5:
-                cur_line.append(w['text'])
-                cur_y = y
-            else:
-                lines.append(' '.join(cur_line))
-                cur_line = [w['text']]
-                cur_y = y
-        if cur_line:
-            lines.append(' '.join(cur_line))
-        col_texts.append('\n'.join(lines))
-
-    return col_texts
-
-
-def split_into_voter_blocks(col_text):
-    """একটা কলামের টেক্সটকে ভোটার ব্লকে ভাগ করে"""
-    # ক্রমিক নম্বর দিয়ে split — যেমন "০০০১." বা "0001."
-    parts = re.split(r'(?=\n?\s*[\d০-৯]{4,5}[।\.\s]\s*নাম)', col_text)
-    blocks = []
-    for p in parts:
-        p = p.strip()
-        if re.match(r'[\d০-৯]{4,5}', p) and 'নাম' in p:
-            blocks.append(p)
-    return blocks
-
-
-# ──────────────────────────────────────────
-# PDF প্রসেসর
+# PDF প্রসেসর — গ্রিডভিত্তিক বক্স এক্সট্র্যাক্টর
 # ──────────────────────────────────────────
 def process_pdf(pdf_path, folder_meta=None):
     voters = []
@@ -226,29 +254,64 @@ def process_pdf(pdf_path, folder_meta=None):
             if not pdf.pages:
                 return voters
 
-            # পেজ ১ — মেটা
-            p1_text = pdf.pages[0].extract_text() or ""
-            p1_meta = parse_page1(p1_text)
+            # Page 1 Metadata
+            p1_meta = parse_page1(pdf.pages[0], folder_meta)
             meta.update({k: v for k, v in p1_meta.items() if v})
 
-            # পেজ ২+ — ভোটার
+            # Pages 2+ Voter grid boxes
             for pg in pdf.pages[1:]:
                 try:
-                    col_texts = extract_3col_blocks(pg)
-                    for col_text in col_texts:
-                        blocks = split_into_voter_blocks(col_text)
-                        for block in blocks:
-                            try:
-                                v = parse_one_block(block, meta)
-                                if v.get('নাম') and len(v['নাম']) > 1:
-                                    voters.append(v)
-                            except Exception:
-                                pass
+                    words = pg.extract_words()
+                    if not words: continue
+                    
+                    # Filter header text and single-character vertical side artifacts
+                    vwords = [w for w in words if w['top'] > 105]
+                    vwords = [w for w in vwords if not ((w['bottom'] - w['top']) > 25 and len(w['text']) <= 2)]
+                    if not vwords: continue
+                    
+                    # Group into horizontal box rows
+                    vwords.sort(key=lambda w: (w['top'], w['x0']))
+                    rows = []
+                    for w in vwords:
+                        matched = False
+                        for r in rows:
+                            if abs(w['top'] - r['avg_top']) < 45:
+                                r['words'].append(w)
+                                r['avg_top'] = sum(x['top'] for x in r['words']) / len(r['words'])
+                                matched = True
+                                break
+                        if not matched:
+                            rows.append({'avg_top': w['top'], 'words': [w]})
+                    rows.sort(key=lambda r: r['avg_top'])
+                    
+                    # In each row, split into 3 columns by X coordinates
+                    for r in rows:
+                        col1 = [w for w in r['words'] if w['x0'] < 280]
+                        col2 = [w for w in r['words'] if 280 <= w['x0'] < 520]
+                        col3 = [w for w in r['words'] if w['x0'] >= 520]
+                        
+                        for col in [col1, col2, col3]:
+                            if not col: continue
+                            # Sort words inside single box by Y lines then X
+                            col.sort(key=lambda w: (round(w['top']/4)*4, w['x0']))
+                            box_str = ' '.join([w['text'] for w in col])
+                            v = parse_one_box(box_str, meta)
+                            if v.get('নাম') and len(v['নাম']) > 1:
+                                voters.append(v)
                 except Exception:
                     pass
 
     except Exception as e:
         print(f"\n    ⚠ {os.path.basename(str(pdf_path))}: {e}")
+
+    # Ensure sequential serial numbers
+    last_sl = 0
+    for v in voters:
+        if v.get('ক্রমিক') and v['ক্রমিক'].isdigit():
+            last_sl = int(v['ক্রমিক'])
+        elif last_sl > 0:
+            last_sl += 1
+            v['ক্রমিক'] = f"{last_sl:04d}"
 
     return voters
 
@@ -257,12 +320,10 @@ def process_pdf(pdf_path, folder_meta=None):
 # ফোল্ডার → মেটা
 # ──────────────────────────────────────────
 def meta_from_path(pdf_path, root):
-    """
-    F:\চট্টগ্রাম-৬\চট্রগ্রাম-৬\RAOZAN\BAGOAN\151592\file.pdf
-    → folder_upazila=RAOZAN, folder_union=BAGOAN, folder_area=151592
-    """
+    pdf_path = Path(pdf_path)
+    root = Path(root)
     try:
-        rel   = Path(pdf_path).relative_to(root)
+        rel   = pdf_path.relative_to(root)
         parts = rel.parts
     except ValueError:
         parts = []
@@ -271,7 +332,16 @@ def meta_from_path(pdf_path, root):
     if len(parts) >= 3: m['_upazila_folder'] = parts[2]
     if len(parts) >= 4: m['_union_folder']   = parts[3]
     if len(parts) >= 5: m['_area_folder']    = parts[4]
-    m['source_file'] = Path(pdf_path).name
+
+    # Fallback to parent directory names if metadata fields are missing
+    if '_area_folder' not in m and len(pdf_path.parents) > 0:
+        m['_area_folder'] = pdf_path.parent.name
+    if '_union_folder' not in m and len(pdf_path.parents) > 1:
+        m['_union_folder'] = pdf_path.parent.parent.name
+    if '_upazila_folder' not in m and len(pdf_path.parents) > 2:
+        m['_upazila_folder'] = pdf_path.parent.parent.parent.name
+
+    m['source_file'] = pdf_path.name
     return m
 
 
@@ -365,25 +435,33 @@ def write_excel(voters, out_path, stats):
 # ──────────────────────────────────────────
 # মেইন
 # ──────────────────────────────────────────
+def safe_input(prompt=""):
+    if sys.stdin.isatty():
+        try:
+            return input(prompt)
+        except (EOFError, KeyboardInterrupt):
+            pass
+    return ""
+
 def main():
     if len(sys.argv) > 1:
         root = sys.argv[1]
     else:
         root = DEFAULT_ROOT
         print(f"\n📁 ডিফল্ট ফোল্ডার: {root}")
-        c = input("অন্য ফোল্ডার পাথ দিন (খালি = ডিফল্ট): ").strip()
+        c = safe_input("অন্য ফোল্ডার পাথ দিন (খালি = ডিফল্ট): ").strip()
         if c: root = c
 
     root = Path(root)
     if not root.exists():
-        print(f"❌ ফোল্ডার পাওয়া যায়নি: {root}"); sys.exit(1)
+        print(f"❌ ফোল্ডার বা ফাইল পাওয়া যায়নি: {root}"); sys.exit(1)
 
     ts          = datetime.now().strftime('%Y%m%d_%H%M%S')
     out_base    = os.path.join(OUTPUT_DIR, f"voter_data_{ts}")
     checkpoint  = out_base + "_checkpoint.json"
 
     print(f"\n{'='*62}")
-    print(f"  বাংলাদেশ ভোটার তালিকা এক্সট্রাক্টর v2.0")
+    print(f"  বাংলাদেশ ভোটার তালিকা এক্সট্রাক্টর v2.5")
     print(f"{'='*62}")
     print(f"  রুট    : {root}")
     print(f"  আউটপুট : {out_base}.xlsx")
@@ -391,7 +469,10 @@ def main():
 
     # সব PDF
     print("📂 PDF খোঁজা হচ্ছে...")
-    all_pdfs = sorted(list(root.rglob("*.pdf")) + list(root.rglob("*.PDF")))
+    if root.is_file():
+        all_pdfs = [root]
+    else:
+        all_pdfs = sorted(list(root.rglob("*.pdf")) + list(root.rglob("*.PDF")))
     total    = len(all_pdfs)
     print(f"   {total:,}টি PDF পাওয়া গেছে\n")
     if total == 0:
@@ -438,7 +519,7 @@ def main():
     if not all_voters:
         print("❌ কোনো ভোটার ডেটা পাওয়া যায়নি!")
         print("   কারণ হতে পারে: PDF-এ টেক্সট লেয়ার নেই (স্ক্যান)।")
-        input("Enter চাপুন..."); sys.exit(1)
+        safe_input("Enter চাপুন..."); sys.exit(1)
 
     stats = dict(total_voters=len(all_voters), total_pdfs=total,
                  success=success, failed=failed,
@@ -460,9 +541,11 @@ def main():
     if os.path.exists(checkpoint):
         os.remove(checkpoint)
 
-    print(f"\n🎉 সম্পন্ন! ডেস্কটপে {len(saved_files)}টি ফাইল তৈরি হয়েছে।")
+    print(f"\n🎉 সম্পন্ন! {len(saved_files)}টি Excel ফাইল তৈরি হয়েছে:")
+    for fpath in saved_files:
+        print(f"   📁 {fpath}")
     print("   এই Excel ফাইলগুলো voter_app.html-এ আমদানি করুন।")
-    input("\nEnter চাপুন বন্ধ করতে...")
+    safe_input("\nEnter চাপুন বন্ধ করতে...")
 
 if __name__ == '__main__':
     try:
@@ -472,4 +555,4 @@ if __name__ == '__main__':
     except Exception as e:
         print(f"\n❌ ত্রুটি: {e}")
         traceback.print_exc()
-        input("Enter চাপুন...")
+        safe_input("Enter চাপুন...")
