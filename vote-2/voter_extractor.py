@@ -38,6 +38,18 @@ try:
 except ImportError:
     print("openpyxl ইনস্টল করুন: pip install openpyxl"); sys.exit(1)
 
+try:
+    import fitz  # PyMuPDF — পেজ রেন্ডার করার জন্য
+except ImportError:
+    print("pymupdf ইনস্টল করুন: pip install pymupdf"); sys.exit(1)
+
+try:
+    import numpy as np
+    from PIL import Image
+    import easyocr
+except ImportError:
+    print("OCR লাইব্রেরি ইনস্টল করুন: pip install easyocr numpy pillow"); sys.exit(1)
+
 # ──────────────────────────────────────────
 # কনফিগারেশন
 # ──────────────────────────────────────────
@@ -45,45 +57,22 @@ DEFAULT_ROOT = r"F:\\"
 OUTPUT_DIR   = os.path.expanduser("~/Desktop")
 BATCH_SAVE   = 1000   # প্রতি ১০০০ ভোটারে চেকপয়েন্ট
 MAX_PER_FILE = 500000 # প্রতি Excel-এ সর্বোচ্চ ৫ লাখ
+OCR_ZOOM     = 3       # পেজ রেন্ডার জুম — বেশি জুম = ভালো OCR কিন্তু ধীর
 
 # ──────────────────────────────────────────
-# বাংলা ফন্ট সিআইডি ও এনকোডিং ডিকশনারি
+# OCR ইঞ্জিন — একবার লোড হয়ে পুরো ব্যাচে পুনর্ব্যবহৃত হয়
 # ──────────────────────────────────────────
-CID_MAP = {
-    '(cid:140)': 'ন্ট',
-    '(cid:203)': '্যা', '(cid:206)': 'র্', '(cid:207)': 'ে', '(cid:208)': 'ৈ',
-    '(cid:209)': 'ু', '(cid:212)': 'ৌ', '(cid:229)': 'গ্র', '(cid:234)': 'ঙ্গ',
-    '(cid:239)': 'শ্চি', '(cid:251)': 'ঞ্চ', '(cid:255)': 'ট্ট', '(cid:275)': 'ত্ত',
-    '(cid:276)': 'ত্র', '(cid:279)': 'দ্দ', '(cid:290)': 'ন্ত', '(cid:292)': 'ন্দ',
-    '(cid:293)': 'ন্ম', '(cid:296)': 'ন্ন', '(cid:297)': 'ন্সী', '(cid:303)': 'ন্যা',
-    '(cid:304)': 'প্রাপ্ত', '(cid:306)': 'ল্লু', '(cid:308)': 'প্র', '(cid:314)': 'ব্দ',
-    '(cid:316)': 'ব্ব', '(cid:317)': 'ব্রা', '(cid:322)': 'ন্নে', '(cid:324)': 'ম্ব',
-    '(cid:327)': 'ম্ম', '(cid:332)': 'ল্লাহ', '(cid:340)': 'শ্চি', '(cid:344)': 'শ্র',
-    '(cid:350)': 'স্ট', '(cid:354)': 'স্ট্র', '(cid:360)': 'স্ট', '(cid:361)': 'স্ত',
-    '(cid:363)': 'চ্ছ', '(cid:369)': 'স্ত্রী', '(cid:381)': 'ছোল', '(cid:383)': 'নুর',
-    '(cid:384)': 'শামস', '(cid:385)': 'রু', '(cid:386)': 'ফজল', '(cid:387)': 'দুল',
-    '(cid:388)': 'ফুল', '(cid:389)': 'হৃদয়', '(cid:390)': 'জল', '(cid:398)': 'মেহের',
-    '(cid:414)': 'দ্দী', '(cid:419)': 'কুর',
-}
+_OCR_READER = None
+def get_ocr_reader():
+    global _OCR_READER
+    if _OCR_READER is None:
+        print("OCR মডেল লোড হচ্ছে (প্রথমবার কিছুটা সময় লাগবে)...")
+        _OCR_READER = easyocr.Reader(['bn'], gpu=False, verbose=False)
+    return _OCR_READER
 
-def clean_text(text):
-    if not text: return ""
-    text = str(text)
-    for cid, val in CID_MAP.items():
-        text = text.replace(cid, val)
-    # Gashchi spelling fix
-    text = text.replace('গিশ্চি', 'গশ্চি').replace('গিেশ্চি', 'গশ্চি').replace('গিশ্চ', 'গশ্চি')
-    # Vowel reordering & Unicode normalization
-    text = re.sub(r'e([\u0980-\u09FF](?:\u09CD[\u0980-\u09FF])?)া', r'\1ো', text)
-    text = re.sub(r'ে([\u0980-\u09FF](?:\u09CD[\u0980-\u09FF])?)া', r'\1ো', text)
-    text = re.sub(r'ে([\u0980-\u09FF](?:\u09CD[\u0980-\u09FF])?)ৗ', r'\1ৌ', text)
-    text = re.sub(r'ে([\u0980-\u09FF](?:\u09CD[\u0980-\u09FF])?)', r'\1ে', text)
-    text = re.sub(r'ৈ([\u0980-\u09FF](?:\u09CD[\u0980-\u09FF])?)', r'\1ৈ', text)
-    text = re.sub(r'ি([\u0980-\u09FF](?:\u09CD[\u0980-\u09FF])?)', r'\1ি', text)
-    text = text.replace('\u25cc', '')
-    text = re.sub(r'\s+', ' ', text).strip()
-    return text
-
+# ──────────────────────────────────────────
+# ইউটিলিটি
+# ──────────────────────────────────────────
 def bn2en(s):
     s = str(s)
     for b, e in zip('০১২৩৪৫৬৭৮৯', '0123456789'):
@@ -91,62 +80,65 @@ def bn2en(s):
     return s
 
 def norm_date(s):
-    s = clean_text(s)
-    m = re.search(r'([০-৯\d]{1,2})[/\-\.]([০-৯\d]{1,2})[/\-\.]([০-৯\d]{2,4})', s)
+    s = bn2en(str(s))
+    m = re.search(r'(\d{1,2})[/\-\.](\d{1,2})[/\-\.](\d{2,4})', s)
     if m:
-        d, m_val, y = bn2en(m.group(1)), bn2en(m.group(2)), bn2en(m.group(3))
+        d, m_val, y = m.group(1), m.group(2), m.group(3)
         if len(y) == 2: y = "19" + y
         return f"{d.zfill(2)}/{m_val.zfill(2)}/{y}"
     return ""
 
+def render_page_image(fitz_page, zoom=OCR_ZOOM):
+    """পেজকে PIL ইমেজে রেন্ডার করে -- OCR-এর জন্য"""
+    pix = fitz_page.get_pixmap(matrix=fitz.Matrix(zoom, zoom))
+    return Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
+
+def ocr_region(pil_img, bbox, zoom, reader):
+    """bbox (x0, top, x1, bottom) -- PDF পয়েন্ট কো-অর্ডিনেট -- OCR করে টেক্সট ফেরত দেয়"""
+    x0, top, x1, bottom = bbox
+    crop = pil_img.crop((x0 * zoom, top * zoom, x1 * zoom, bottom * zoom))
+    lines = reader.readtext(np.array(crop), detail=0, paragraph=True)
+    return '\n'.join(lines)
+
 # ──────────────────────────────────────────
-# পেজ ১ — কেন্দ্র মেটা
+# পেজ ১ -- কেন্দ্র মেটা (পুরো পেজ OCR করে পার্স করা হয়)
 # ──────────────────────────────────────────
-def parse_page1(page, folder_meta=None):
-    words = page.extract_words()
+def parse_page1(page, fitz_page, folder_meta=None):
     meta = {}
-    
-    full_text = clean_text(page.extract_text() or '')
-    if 'মহিলা' in full_text[:600]: meta['লিঙ্গ'] = 'মহিলা'
-    elif 'পুরুষ' in full_text[:600]: meta['লিঙ্গ'] = 'পুরুষ'
-    
-    for w in words:
-        top = w['top']
-        x0 = w['x0']
-        txt = clean_text(w['text'])
-        if not txt: continue
-        
-        # Upazila: top ~ 304, x0 ~ 200
-        if 290 < top < 320 and 190 <= x0 < 380:
-            if 'উপজেলা' not in txt:
-                meta['উপজেলা'] = meta.get('উপজেলা', '') + ' ' + txt
-                
-        # Union: top ~ 325..365, x0 ~ 190..380
-        elif 325 < top < 365 and 190 <= x0 < 380:
-            if 'ইউনিয়ন' not in txt and 'ক্যান্টনমেন্ট' not in txt and 'বোর্ড' not in txt and 'পৌর' not in txt and 'ওয়ার্ড' not in txt:
-                meta['ইউনিয়ন'] = meta.get('ইউনিয়ন', '') + ' ' + txt
-                
-        # Area Name: top ~ 375..405, x0 ~ 190..380
-        elif 375 < top < 405 and 190 <= x0 < 380:
-            meta['এলাকা_নাম'] = meta.get('এলাকা_নাম', '') + ' ' + txt
-            
-        # Area No: top ~ 410..435, x0 ~ 190..380
-        elif 410 < top < 435 and 190 <= x0 < 380:
-            meta['এলাকা_নং'] = meta.get('এলাকা_নং', '') + ' ' + txt
-            
-        # District: top ~ 225..250, x0 > 420
-        elif 225 < top < 250 and x0 > 420:
-            if 'জেলা' not in txt:
-                meta['জেলা'] = meta.get('জেলা', '') + ' ' + txt
-                
-        # Ward No: top ~ 340..365, x0 > 620
-        elif 340 < top < 365 and x0 > 620:
-            meta['ওয়ার্ড'] = meta.get('ওয়ার্ড', '') + ' ' + txt
+    reader = get_ocr_reader()
+    img = render_page_image(fitz_page)
+    text = ocr_region(img, (0, 0, page.width, page.height), OCR_ZOOM, reader)
 
-    for k in meta:
-        meta[k] = clean_text(meta[k])
+    head = text[:250]
+    if 'মহিলা' in head: meta['লিঙ্গ'] = 'মহিলা'
+    elif 'পুরুষ' in head: meta['লিঙ্গ'] = 'পুরুষ'
 
-    # Fallbacks if metadata missing
+    m = re.search(r'জেলা\s*[:ঃ]\s*([^\n]+)', text)
+    if m: meta['জেলা'] = m.group(1).strip()
+
+    m = re.search(r'উপজেলা[^\n]*\n\s*([^\n]+)', text)
+    if m: meta['উপজেলা'] = m.group(1).strip()
+
+    m = re.search(r'পৌরসভা\s*\n\s*([^\n]+)', text)
+    if m: meta['পৌরসভা'] = m.group(1).strip()
+
+    m = re.search(r'ইউনিয়ন[^\n]*ওয়ার্ড\s+(\S+)', text)
+    if m: meta['ইউনিয়ন'] = m.group(1).strip()
+
+    m = re.search(r'ভোটার এলাকা\s*\n\s*([^\n]+)', text)
+    if m: meta['এলাকা_নাম'] = m.group(1).strip()
+
+    m = re.search(r'এলাকার[^\d\n]*([০-৯\d]{3,6})', text)
+    if m: meta['এলাকা_নং'] = bn2en(m.group(1))
+
+    # ওয়ার্ড নং -- শুধু সংখ্যা, তাই raw text থেকেও নির্ভরযোগ্যভাবে পাওয়া যায়
+    for w in page.extract_words():
+        if 335 < w['top'] < 370 and w['x0'] > 600:
+            d = bn2en(w['text']).strip('()')
+            if d.isdigit() and len(d) <= 3:
+                meta['ওয়ার্ড'] = d
+                break
+
     if not meta.get('ইউনিয়ন') and folder_meta and folder_meta.get('_union_folder'):
         meta['ইউনিয়ন'] = folder_meta['_union_folder']
     if not meta.get('উপজেলা') and folder_meta and folder_meta.get('_upazila_folder'):
@@ -157,154 +149,136 @@ def parse_page1(page, folder_meta=None):
 # ──────────────────────────────────────────
 # ভোটার বক্স পার্সার
 # ──────────────────────────────────────────
-def post_process_record(v):
-    for field in ['নাম', 'পিতা', 'মাতা', 'পেশা', 'ঠিকানা', 'ইউনিয়ন', 'উপজেলা', 'জেলা', 'এলাকা_নাম']:
-        val = v.get(field, '')
-        if not val: continue
-        val = str(val)
+def clean_value(val):
+    if not val: return ''
+    val = str(val).replace('_', ' ')
+    val = re.sub(r'\s+', ' ', val).strip(' ,.-')
+    return val
 
-        val = val.replace('(cid:259)', '').replace('(cid:281)', 'ঞ্চ').replace('(cid:217)', 'ক্ষ')
-        val = val.replace('(cid:245)', 'জাফ').replace('(cid:253)', 'নজু')
+def get_field_from_text(text, pattern):
+    m = re.search(pattern, text)
+    return clean_value(m.group(1)) if m else ''
 
-        val = val.replace('মেভাহাম্মদ', 'মোহাম্মদ').replace('মভাহাম্মদ', 'মোহাম্মদ').replace('মভাহাদ্দ', 'মোহাম্মদ')
-        val = val.replace('মেভাঃ', 'মোঃ').replace('মেভা', 'মোঃ')
-        val = val.replace('মোজাফাফর', 'মোজাফফর').replace('মোজাফাফৰ', 'মোজাফফর')
-        val = val.replace('ইউশামসপ', 'ইউসুফ').replace('ইউসপ', 'ইউসুফ').replace('ইউশফ', 'ইউসুফ')
-        val = val.replace('রিফক', 'রফিক').replace('আেবদীন', 'আবেদীন')
-        val = val.replace('স ালমা', 'সালমা').replace('মনজুুরা', 'মনজূরা').replace('কুরলছুমা', 'কুলছুম')
-        val = val.replace('আবদুলল', 'আব্দুল').replace('ল্লাহাহ', 'ল্লাহ')
-        val = val.replace('নুররুল', 'নুরুল').replace('নুরর', 'নুর')
-        val = val.replace('অন্যাান্যা', 'অন্যান্য').replace('অন্যাান্য', 'অন্যান্য').replace('অন্যানা', 'অন্যান্য')
-        val = val.replace('ব্যাবসা', 'ব্যবসা').replace('চাকুররী', 'চাকুরী')
+def extract_cell_digits(page, bbox):
+    """সংখ্যাসূচক ফিল্ড (ক্রমিক, ভোটার নং, জন্ম তারিখ) -- raw টেক্সট থেকে,
+    কারণ সংখ্যার গ্লিফ সবসময় সঠিকভাবে এক্সট্র্যাক্ট হয়, যুক্তাক্ষরের সমস্যা এখানে প্রযোজ্য না।"""
+    raw = page.crop(bbox).extract_text() or ''
+    text = bn2en(raw)
+    out = {'ক্রমিক': '', 'ভোটার_নং': '', 'জন্ম_তারিখ': ''}
 
-        val = re.sub(r'\s+(?:স্ত|ন্ত|ত|র|া|ন|স)$', '', val)
-        val = re.sub(r'\s+', ' ', val).strip()
-        v[field] = val
+    m_sl = re.match(r'\s*(\d{4,5})', text)
+    if m_sl: out['ক্রমিক'] = m_sl.group(1)
 
-    name = v.get('নাম', '')
-    if re.search(r'\s+(?:চু|চূ|চৌ)$', name):
-        name = re.sub(r'\s+(?:চু|চূ|চৌ)$', ' চৌধুরী', name)
-    v['নাম'] = name
+    m_vno = re.search(r'(\d{10,14})', text)
+    if m_vno: out['ভোটার_নং'] = m_vno.group(1)
 
-    occ = v.get('পেশা', '')
-    if any(k in occ for k in ['পাশ্চী', 'পাদ্রী', 'পাদ্্রী', 'পাঞ্চী', 'পুরোহিত']):
-        v['পেশা'] = 'ইমাম/পুরোহিত/পাদ্রী'
-    elif 'ড্রাইভার' in occ or 'াইভার' in occ:
-        v['পেশা'] = 'ড্রাইভার'
-    elif 'শিক্ষক' in occ or 'শিঙ্ক' in occ:
-        v['পেশা'] = 'শিক্ষক'
+    out['জন্ম_তারিখ'] = norm_date(text)
+    return out
 
-    return v
-
-def parse_one_box(box_text, meta):
-    b = clean_text(box_text)
+def parse_cell_ocr_fields(ocr_text):
+    """নাম/পিতা/মাতা/পেশা/ঠিকানা -- OCR করা পরিষ্কার টেক্সট থেকে"""
+    t = ocr_text.replace('\n', ' ')
     v = {}
-    
-    # Serial
-    m_sl = re.search(r'^\s*([\d০-৯]{4,5})', b)
-    v['ক্রমিক'] = bn2en(m_sl.group(1)) if m_sl else ''
-    
-    # Name
-    m_name = re.search(r'নাম\s*:\s*(.+?)(?=\s*ভোটার নং|\s*পিতা|\Z)', b)
-    name = m_name.group(1).strip() if m_name else ''
-    name = re.sub(r'[\d০-৯]{4,5}[\.\।]?$', '', name).strip()
-    v['নাম'] = name
-    
-    # Voter No
-    m_vno = re.search(r'ভোটার নং\s*:\s*([\d০-৯]+)', b)
-    v['ভোটার_নং'] = bn2en(m_vno.group(1).strip()) if m_vno else ''
-    
-    # Father
-    m_fat = re.search(r'পিতা\s*:\s*(.+?)(?=\s*মাতা|\Z)', b)
-    fat = m_fat.group(1).strip() if m_fat else ''
-    v['পিতা'] = re.sub(r'[\d০-৯]{4,5}[\.\।]?$', '', fat).strip()
-    
-    # Mother
-    m_mot = re.search(r'মাতা\s*:\s*(.+?)(?=\s*(?:পেশা|কপেশা|জন্ম|তারিখ|ঠিকানা)|\Z)', b)
-    mot = m_mot.group(1).strip() if m_mot else ''
-    v['মাতা'] = re.sub(r'[\d০-৯]{4,5}[\.\।]?$', '', mot).strip()
-    
-    # DOB
-    v['জন্ম_তারিখ'] = norm_date(b)
-    
-    # Occupation
-    m_occ = re.search(r'(?:পেশা|কপেশা)\s*:\s*([^,,\n]+)', b)
-    v['পেশা'] = m_occ.group(1).strip() if m_occ else ''
-    
-    # Address
-    m_add = re.search(r'ঠিকানা\s*:\s*(.+)', b)
-    v['ঠিকানা'] = m_add.group(1).strip() if m_add else ''
-    
-    # Copy metadata
-    for k in ['লিঙ্গ', 'জেলা', 'উপজেলা', 'পৌরসভা', 'ইউনিয়ন', 'ওয়ার্ড', 'এলাকা_নং', 'এলাকা_নাম']:
-        v[k] = meta.get(k, '')
-
-    v = post_process_record(v)
+    v['নাম']    = get_field_from_text(t, r'নাম\s*[:ঃ]\s*(.+?)(?=ভোটার|পিতা|$)')
+    v['পিতা']   = get_field_from_text(t, r'পিতা\s*[:ঃ]\s*(.+?)(?=মাতা|$)')
+    v['মাতা']   = get_field_from_text(t, r'মাতা\s*[:ঃ]\s*(.+?)(?=পেশা|জন্ম|$)')
+    v['পেশা']   = get_field_from_text(t, r'পেশা\s*[:ঃ]\s*(.+?)(?=[,;]|\s*জন|\s*ঠিকানা|$)')
+    v['ঠিকানা'] = get_field_from_text(t, r'ঠিকানা\s*[:ঃ]\s*(.+)$')
     return v
 
 # ──────────────────────────────────────────
-# PDF প্রসেসর — গ্রিডভিত্তিক বক্স এক্সট্র্যাক্টর
+# রেকর্ড যাচাই — সন্দেহজনক/অসম্পূর্ণ ডেটা চিহ্নিতকরণ
+# ──────────────────────────────────────────
+_SUSPICIOUS_CHARS = re.compile(r'[?^~]|[a-zA-Z]')
+_STRAY_PAREN = re.compile(r'\([^ঀ-৿\s]{1,4}\)')
+_LEAK_LABEL = re.compile(r'জন্ম|তারিখ|ঠিকানা')
+
+def flag_record(v):
+    """রেকর্ডে সন্দেহজনক/অসম্পূর্ণ কিছু থাকলে কারণসহ তালিকা ফেরত দেয়; সব ঠিক থাকলে ফাঁকা তালিকা।"""
+    reasons = []
+
+    required = [('নাম','নাম'), ('ভোটার_নং','ভোটার নং'), ('পিতা','পিতার নাম'),
+                ('মাতা','মাতার নাম'), ('জন্ম_তারিখ','জন্ম তারিখ'), ('ঠিকানা','ঠিকানা')]
+    missing = [label for key, label in required if not v.get(key)]
+    if missing:
+        reasons.append('অসম্পূর্ণ: ' + ', '.join(missing))
+
+    for key, label in [('নাম','নাম'), ('পিতা','পিতা'), ('মাতা','মাতা'), ('ঠিকানা','ঠিকানা'), ('পেশা','পেশা')]:
+        val = v.get(key, '')
+        if not val:
+            continue
+        if _SUSPICIOUS_CHARS.search(val) or _STRAY_PAREN.search(val):
+            reasons.append(f'সন্দেহজনক অক্ষর: {label}')
+        if key in ('পিতা', 'মাতা') and len(val) > 35:
+            reasons.append(f'অস্বাভাবিক দৈর্ঘ্য: {label}')
+        if key == 'পেশা' and _LEAK_LABEL.search(val):
+            reasons.append('পেশা ফিল্ডে অন্য তথ্য মিশে গেছে')
+
+    vno = v.get('ভোটার_নং', '')
+    if vno and not (10 <= len(vno) <= 14):
+        reasons.append('অস্বাভাবিক ভোটার নং দৈর্ঘ্য')
+
+    return reasons
+
+# ──────────────────────────────────────────
+# PDF প্রসেসর — গ্রিড টেবিল শনাক্তকরণ + OCR হাইব্রিড
 # ──────────────────────────────────────────
 def process_pdf(pdf_path, folder_meta=None):
     voters = []
     meta   = (folder_meta or {}).copy()
+    reader = get_ocr_reader()
 
     try:
         with pdfplumber.open(pdf_path) as pdf:
             if not pdf.pages:
                 return voters
 
-            # Page 1 Metadata
-            p1_meta = parse_page1(pdf.pages[0], folder_meta)
-            meta.update({k: v for k, v in p1_meta.items() if v})
+            fitz_doc = fitz.open(str(pdf_path))
+            try:
+                # পেজ ১ — কেন্দ্র মেটা
+                p1_meta = parse_page1(pdf.pages[0], fitz_doc[0], folder_meta)
+                meta.update({k: v for k, v in p1_meta.items() if v})
 
-            # Pages 2+ Voter grid boxes
-            for pg in pdf.pages[1:]:
-                try:
-                    words = pg.extract_words()
-                    if not words: continue
-                    
-                    # Filter header text and single-character vertical side artifacts
-                    vwords = [w for w in words if w['top'] > 105]
-                    vwords = [w for w in vwords if not ((w['bottom'] - w['top']) > 25 and len(w['text']) <= 2)]
-                    if not vwords: continue
-                    
-                    # Group into horizontal box rows
-                    vwords.sort(key=lambda w: (w['top'], w['x0']))
-                    rows = []
-                    for w in vwords:
-                        matched = False
-                        for r in rows:
-                            if abs(w['top'] - r['avg_top']) < 45:
-                                r['words'].append(w)
-                                r['avg_top'] = sum(x['top'] for x in r['words']) / len(r['words'])
-                                matched = True
-                                break
-                        if not matched:
-                            rows.append({'avg_top': w['top'], 'words': [w]})
-                    rows.sort(key=lambda r: r['avg_top'])
-                    
-                    # In each row, split into 3 columns by X coordinates
-                    for r in rows:
-                        col1 = [w for w in r['words'] if w['x0'] < 280]
-                        col2 = [w for w in r['words'] if 280 <= w['x0'] < 520]
-                        col3 = [w for w in r['words'] if w['x0'] >= 520]
-                        
-                        for col in [col1, col2, col3]:
-                            if not col: continue
-                            # Sort words inside single box by Y lines then X
-                            col.sort(key=lambda w: (round(w['top']/4)*4, w['x0']))
-                            box_str = ' '.join([w['text'] for w in col])
-                            v = parse_one_box(box_str, meta)
-                            if v.get('নাম') and len(v['নাম']) > 1:
-                                voters.append(v)
-                except Exception:
-                    pass
+                # পেজ ২+ — ভোটার গ্রিড
+                for page_idx in range(1, len(pdf.pages)):
+                    pg = pdf.pages[page_idx]
+                    try:
+                        tables = pg.find_tables()
+                        if not tables:
+                            continue
+                        table = tables[0]
+                        pil_img = render_page_image(fitz_doc[page_idx])
+
+                        for row in table.rows:
+                            for cell in row.cells:
+                                if not cell:
+                                    continue
+                                try:
+                                    digits = extract_cell_digits(pg, cell)
+                                    ocr_text = ocr_region(pil_img, cell, OCR_ZOOM, reader)
+                                    fields = parse_cell_ocr_fields(ocr_text)
+                                    if not fields.get('নাম') or len(fields['নাম']) < 2:
+                                        continue
+                                    v = {}
+                                    v.update(digits)
+                                    v.update(fields)
+                                    for k in ['লিঙ্গ', 'জেলা', 'উপজেলা', 'পৌরসভা',
+                                              'ইউনিয়ন', 'ওয়ার্ড', 'এলাকা_নং', 'এলাকা_নাম']:
+                                        v[k] = meta.get(k, '')
+                                    flags = flag_record(v)
+                                    v['_flag'] = '; '.join(flags)
+                                    voters.append(v)
+                                except Exception:
+                                    pass
+                    except Exception:
+                        pass
+            finally:
+                fitz_doc.close()
 
     except Exception as e:
         print(f"\n    ⚠ {os.path.basename(str(pdf_path))}: {e}")
 
-    # Ensure sequential serial numbers
+    # ক্রমিক ফাঁকা থাকলে (বিরল OCR/টেক্সট মিস) ধারাবাহিকভাবে পূরণ করা হয়
     last_sl = 0
     for v in voters:
         if v.get('ক্রমিক') and v['ক্রমিক'].isdigit():
@@ -314,6 +288,7 @@ def process_pdf(pdf_path, folder_meta=None):
             v['ক্রমিক'] = f"{last_sl:04d}"
 
     return voters
+
 
 
 # ──────────────────────────────────────────
@@ -369,6 +344,7 @@ COLS = [
     ('_union_folder',  'ফোল্ডার ইউনিয়ন', 14),
     ('_area_folder',   'ফোল্ডার এলাকা',  12),
     ('source_file',    'উৎস ফাইল',        20),
+    ('_flag',          'যাচাই প্রয়োজন',   30),
 ]
 
 def write_excel(voters, out_path, stats):
@@ -382,6 +358,8 @@ def write_excel(voters, out_path, stats):
     thin   = Side(style="thin", color="DDDDDD")
     brd    = Border(left=thin, right=thin, top=thin, bottom=thin)
     altf   = PatternFill("solid", start_color="EEF3FF")
+    flagf  = PatternFill("solid", start_color="FDE2E2")
+    flagfont = Font(name="Arial", size=9, color="B00020")
     dfont  = Font(name="Arial", size=9)
     dctr   = Alignment(horizontal="center", vertical="center")
     dlft   = Alignment(horizontal="left",   vertical="center")
@@ -395,13 +373,20 @@ def write_excel(voters, out_path, stats):
 
     # ডেটা
     center_cols = {1, 7, 8, 13, 14}  # ক্রমিক, তারিখ, লিঙ্গ, ওয়ার্ড, এলাকা নং
+    flagged_count = 0
     for ri, v in enumerate(voters, 2):
+        is_flagged = bool(v.get('_flag'))
+        if is_flagged: flagged_count += 1
         for ci, (key, _, _w) in enumerate(COLS, 1):
             c = ws.cell(row=ri, column=ci, value=v.get(key, ''))
-            c.font = dfont
             c.alignment = dctr if ci in center_cols else dlft
             c.border = brd
-            if ri % 2 == 0: c.fill = altf
+            if is_flagged:
+                c.font = flagfont
+                c.fill = flagf
+            else:
+                c.font = dfont
+                if ri % 2 == 0: c.fill = altf
 
     # কলাম প্রস্থ
     for ci, (_, _, w) in enumerate(COLS, 1):
@@ -415,18 +400,22 @@ def write_excel(voters, out_path, stats):
     ws2['A1'] = "বাংলাদেশ ভোটার তালিকা — প্রক্রিয়াকরণ রিপোর্ট"
     ws2['A1'].font = Font(bold=True, size=13, color="162B4D", name="Arial")
     rows = [
-        ("মোট ভোটার",      stats.get('total_voters', 0)),
-        ("মোট PDF ফাইল",   stats.get('total_pdfs',   0)),
-        ("সফল ফাইল",       stats.get('success',      0)),
-        ("ব্যর্থ ফাইল",    stats.get('failed',       0)),
-        ("মোট সময়",        stats.get('elapsed',      '')),
-        ("তৈরির তারিখ",    datetime.now().strftime('%d/%m/%Y %H:%M')),
+        ("মোট ভোটার",         stats.get('total_voters', 0)),
+        ("যাচাই প্রয়োজন",     flagged_count),
+        ("মোট PDF ফাইল",      stats.get('total_pdfs',   0)),
+        ("সফল ফাইল",          stats.get('success',      0)),
+        ("ব্যর্থ ফাইল",       stats.get('failed',       0)),
+        ("মোট সময়",           stats.get('elapsed',      '')),
+        ("তৈরির তারিখ",       datetime.now().strftime('%d/%m/%Y %H:%M')),
     ]
     for ri, (lbl, val) in enumerate(rows, 3):
         ws2.cell(row=ri, column=1, value=lbl).font = Font(bold=True, name="Arial", size=10)
-        ws2.cell(row=ri, column=2, value=val).font = Font(name="Arial", size=10)
+        c2 = ws2.cell(row=ri, column=2, value=val)
+        c2.font = Font(name="Arial", size=10, color="B00020" if lbl == "যাচাই প্রয়োজন" and flagged_count else "000000")
     ws2.column_dimensions['A'].width = 22
     ws2.column_dimensions['B'].width = 22
+    ws2['A10'] = "লাল রঙে চিহ্নিত সারিগুলো ম্যানুয়ালি যাচাই করে নিন (অসম্পূর্ণ বা সন্দেহজনক তথ্য)।"
+    ws2['A10'].font = Font(italic=True, size=9, color="6b7280", name="Arial")
 
     wb.save(out_path)
     return out_path
@@ -508,12 +497,15 @@ def main():
 
     elapsed_total = time.time() - t0
 
+    flagged = sum(1 for v in all_voters if v.get('_flag'))
+
     print(f"\n{'='*62}")
     print(f"  ✅ প্রক্রিয়াকরণ সম্পন্ন!")
-    print(f"  মোট ভোটার  : {len(all_voters):,}")
-    print(f"  সফল ফাইল   : {success:,}")
-    print(f"  ব্যর্থ ফাইল : {failed:,}")
-    print(f"  মোট সময়    : {elapsed_total/60:.1f} মিনিট")
+    print(f"  মোট ভোটার     : {len(all_voters):,}")
+    print(f"  যাচাই প্রয়োজন : {flagged:,}")
+    print(f"  সফল ফাইল      : {success:,}")
+    print(f"  ব্যর্থ ফাইল    : {failed:,}")
+    print(f"  মোট সময়       : {elapsed_total/60:.1f} মিনিট")
     print(f"{'='*62}\n")
 
     if not all_voters:

@@ -21,8 +21,8 @@ if errorlevel 1 (
 )
 
 echo [1/3] Python পাওয়া গেছে।
-echo [2/3] লাইব্রেরি আপডেট হচ্ছে...
-pip install pdfplumber openpyxl --quiet --upgrade
+echo [2/3] লাইব্রেরি আপডেট হচ্ছে (OCR লাইব্রেরিসহ, প্রথমবার কয়েক মিনিট ও প্রায় ১ জিবি ডাউনলোড লাগতে পারে)...
+pip install pdfplumber openpyxl pymupdf easyocr numpy pillow --quiet --upgrade
 if errorlevel 1 (
     echo [X] লাইব্রেরি ইনস্টল ব্যর্থ। ইন্টারনেট চেক করুন।
     pause & exit /b 1
