@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>বাংলাদেশ ভোটার তালিকা অ্যাপ</title>
+<style>
+  :root {
+    --navy: #162B4D;
+    --navy-light: #223a66;
+    --bg: #f5f7fb;
+    --card: #ffffff;
+    --border: #e1e6ef;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --accent: #2563eb;
+    --flag-bg: #fde2e2;
+    --flag-text: #b00020;
+    --ok: #16a34a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: "Segoe UI", "Noto Sans Bengali", Arial, sans-serif;
+    background: var(--bg); color: var(--text); font-size: 14px;
+  }
+  header {
+    background: var(--navy); color: #fff; padding: 14px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  header h1 { font-size: 17px; margin: 0; font-weight: 600; }
+  nav.tabs { display: flex; gap: 4px; }
+  nav.tabs button {
+    background: transparent; border: none; color: #cdd7ea; padding: 8px 16px;
+    border-radius: 6px 6px 0 0; cursor: pointer; font-size: 13.5px; font-weight: 500;
+  }
+  nav.tabs button.active { background: var(--bg); color: var(--navy); }
+  main { padding: 18px 20px; max-width: 1400px; margin: 0 auto; }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px; margin-bottom: 16px;
+  }
+  .card h2 { margin: 0 0 12px; font-size: 14px; color: var(--navy); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* --- ব্রাউজার --- */
+  .breadcrumb { font-size: 12.5px; color: var(--muted); margin-bottom: 8px; word-break: break-all; }
+  .file-list { border: 1px solid var(--border); border-radius: 8px; max-height: 340px; overflow-y: auto; }
+  .file-row {
+    display: flex; align-items: center; gap: 8px; padding: 7px 12px; cursor: pointer;
+    border-bottom: 1px solid #f0f2f6; font-size: 13.5px;
+  }
+  .file-row:last-child { border-bottom: none; }
+  .file-row:hover { background: #f4f7ff; }
+  .file-row.selected { background: #e8f0fe; }
+  .file-row .icon { width: 18px; text-align: center; }
+  .file-row .size { margin-left: auto; color: var(--muted); font-size: 12px; }
+  .empty-hint { padding: 14px; color: var(--muted); font-size: 13px; }
+
+  .selected-bar {
+    display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 10px 12px;
+    background: #eef3ff; border-radius: 8px; font-size: 13px;
+  }
+  .selected-bar span { flex: 1; word-break: break-all; }
+
+  button.primary {
+    background: var(--accent); color: #fff; border: none; padding: 8px 16px;
+    border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500;
+  }
+  button.primary:disabled { background: #9ab4e8; cursor: not-allowed; }
+  button.secondary {
+    background: #fff; color: var(--navy); border: 1px solid var(--border); padding: 8px 14px;
+    border-radius: 6px; cursor: pointer; font-size: 13px;
+  }
+
+  /* --- প্রগ্রেস --- */
+  .progress-wrap { display: none; margin-top: 14px; }
+  .progress-wrap.active { display: block; }
+  .progress-bar-bg { background: #e5e9f2; border-radius: 6px; height: 10px; overflow: hidden; }
+  .progress-bar-fill { background: var(--accent); height: 100%; width: 0%; transition: width .3s; }
+  .progress-stats {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px;
+  }
+  .stat-box { background: #f8f9fc; border-radius: 8px; padding: 8px 10px; text-align: center; }
+  .stat-box .val { font-size: 17px; font-weight: 700; color: var(--navy); }
+  .stat-box .lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .result-box { display: none; margin-top: 14px; padding: 14px; background: #eafaf0; border-radius: 8px; }
+  .result-box.active { display: block; }
+  .error-box { display: none; margin-top: 14px; padding: 12px; background: #fdecec; color: #b00020; border-radius: 8px; font-size: 13px; }
+  .error-box.active { display: block; }
+
+  /* --- ডেটা টেবিল --- */
+  .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px; }
+  .toolbar input[type=text], .toolbar select {
+    padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px;
+  }
+  .toolbar input[type=text] { flex: 1; min-width: 200px; }
+  .toolbar label { font-size: 13px; display: flex; align-items: center; gap: 5px; }
+  .summary-line { font-size: 12.5px; color: var(--muted); margin-bottom: 8px; }
+  .table-wrap { overflow: auto; max-height: 62vh; border: 1px solid var(--border); border-radius: 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+  thead th {
+    background: var(--navy); color: #fff; position: sticky; top: 0; padding: 8px 10px;
+    text-align: center; white-space: nowrap; z-index: 1;
+  }
+  tbody td {
+    border: 1px solid #eef0f4; padding: 5px 8px; white-space: nowrap;
+    max-width: 220px; overflow: hidden; text-overflow: ellipsis;
+  }
+  tbody tr:nth-child(even) td { background: #f7f9fd; }
+  tbody tr.flagged td { background: var(--flag-bg); color: var(--flag-text); }
+  td[contenteditable="true"] { cursor: text; }
+  td[contenteditable="true"]:focus {
+    outline: 2px solid var(--accent); outline-offset: -2px; white-space: normal; background: #fff !important; color: var(--text) !important;
+  }
+  td.dirty { box-shadow: inset 0 0 0 2px #f59e0b; }
+  .col-center { text-align: center; }
+  .save-bar {
+    position: sticky; bottom: 0; display: none; align-items: center; gap: 12px;
+    background: #fff; border-top: 1px solid var(--border); padding: 10px 14px; margin-top: -1px;
+    border-radius: 0 0 8px 8px;
+  }
+  .save-bar.active { display: flex; }
+  .save-bar .count { font-size: 12.5px; color: var(--muted); }
+  .toast {
+    position: fixed; bottom: 20px; right: 20px; background: var(--navy); color: #fff;
+    padding: 10px 18px; border-radius: 8px; font-size: 13px; opacity: 0; transform: translateY(10px);
+    transition: all .25s; pointer-events: none; z-index: 50;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .muted { color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🗳️ বাংলাদেশ ভোটার তালিকা অ্যাপ</h1>
+  <nav class="tabs">
+    <button id="tab-btn-convert" class="active" onclick="switchTab('convert')">কনভার্ট</button>
+    <button id="tab-btn-browse" onclick="switchTab('browse')">ডেটা ব্রাউজ ও এডিট</button>
+  </nav>
+</header>
+
+<main>
+
+  <!-- ═══════════════ কনভার্ট ট্যাব ═══════════════ -->
+  <section id="tab-convert" class="tab-panel active">
+    <div class="card">
+      <h2>১. PDF ফাইল বাছাই করুন</h2>
+      <div class="breadcrumb" id="breadcrumb">লোড হচ্ছে...</div>
+      <div class="file-list" id="fileList"></div>
+      <div class="selected-bar" id="selectedBar" style="display:none;">
+        <span id="selectedPath"></span>
+        <button class="primary" id="convertBtn" onclick="startConvert()">কনভার্ট শুরু করুন</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>২. প্রগ্রেস</h2>
+      <div id="idleHint" class="muted">এখনো কোনো কনভার্সন শুরু হয়নি।</div>
+      <div class="progress-wrap" id="progressWrap">
+        <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
+        <div class="progress-stats">
+          <div class="stat-box"><div class="val" id="statPage">-</div><div class="lbl">পেজ</div></div>
+          <div class="stat-box"><div class="val" id="statCell">-</div><div class="lbl">সেল (এই পেজে)</div></div>
+          <div class="stat-box"><div class="val" id="statVoters">0</div><div class="lbl">ভোটার সংগৃহীত</div></div>
+          <div class="stat-box"><div class="val" id="statElapsed">0 মিনিট</div><div class="lbl">সময় চলছে</div></div>
+        </div>
+      </div>
+      <div class="result-box" id="resultBox"></div>
+      <div class="error-box" id="errorBox"></div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ ব্রাউজ ও এডিট ট্যাব ═══════════════ -->
+  <section id="tab-browse" class="tab-panel">
+    <div class="card">
+      <h2>এক্সেল ফাইল বাছাই করুন</h2>
+      <div class="toolbar">
+        <select id="outputSelect" onchange="loadSelectedOutput()"></select>
+        <button class="secondary" onclick="refreshOutputs()">🔄 রিফ্রেশ</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="toolbar">
+        <input type="text" id="searchBox" placeholder="নাম, ভোটার নং, পিতা, মাতা, ঠিকানা দিয়ে খুঁজুন..." oninput="applyFilters()">
+        <label><input type="checkbox" id="flaggedOnly" onchange="applyFilters()"> শুধু যাচাই প্রয়োজন</label>
+        <select id="wardFilter" onchange="applyFilters()"><option value="">সব ওয়ার্ড</option></select>
+      </div>
+      <div class="summary-line" id="summaryLine">কোনো ফাইল লোড করা হয়নি।</div>
+      <div class="table-wrap">
+        <table id="dataTable">
+          <thead><tr id="headRow"></tr></thead>
+          <tbody id="bodyRows"></tbody>
+        </table>
+      </div>
+      <div class="save-bar" id="saveBar">
+        <span class="count" id="dirtyCount">0টি পরিবর্তন</span>
+        <button class="primary" onclick="saveEdits()">সেভ করুন</button>
+        <button class="secondary" onclick="discardEdits()">বাতিল করুন</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = "";
+let currentBrowsePath = "";
+let selectedPdf = null;
+let activeJobId = null;
+let currentFile = null;     // ব্রাউজ ট্যাবে লোড করা এক্সেল ফাইলের পাথ
+let currentColumns = [];    // [{key,label}]
+let currentRows = [];       // [{_row, key: val, ...}]
+let dirtyEdits = {};        // "row:key" -> value
+
+function switchTab(name) {
+  document.getElementById('tab-convert').classList.toggle('active', name === 'convert');
+  document.getElementById('tab-browse').classList.toggle('active', name === 'browse');
+  document.getElementById('tab-btn-convert').classList.toggle('active', name === 'convert');
+  document.getElementById('tab-btn-browse').classList.toggle('active', name === 'browse');
+  if (name === 'browse' && !currentFile) refreshOutputs();
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+/* ───────────── ফোল্ডার ব্রাউজার ───────────── */
+async function browseTo(path) {
+  currentBrowsePath = path || "";
+  const res = await fetch(`${API}/api/browse?path=${encodeURIComponent(currentBrowsePath)}`);
+  const data = await res.json();
+  document.getElementById('breadcrumb').textContent = data.path || "রুট (ড্রাইভ/ফোল্ডার বাছাই করুন)";
+
+  const list = document.getElementById('fileList');
+  list.innerHTML = '';
+
+  if (data.parent) {
+    const up = document.createElement('div');
+    up.className = 'file-row';
+    up.innerHTML = `<span class="icon">↩️</span><span>.. (উপরে যান)</span>`;
+    up.onclick = () => browseTo(data.parent);
+    list.appendChild(up);
+  }
+
+  if (!data.entries.length) {
+    const empty = document.createElement('div');
+    empty.className = 'empty-hint';
+    empty.textContent = 'এই ফোল্ডারে কোনো সাব-ফোল্ডার বা PDF নেই।';
+    list.appendChild(empty);
+  }
+
+  data.entries.forEach(e => {
+    const row = document.createElement('div');
+    row.className = 'file-row';
+    if (e.type === 'dir') {
+      row.innerHTML = `<span class="icon">📁</span><span>${escapeHtml(e.name)}</span>`;
+      row.onclick = () => browseTo(e.path);
+    } else {
+      row.innerHTML = `<span class="icon">📄</span><span>${escapeHtml(e.name)}</span><span class="size">${e.size_mb} MB</span>`;
+      row.onclick = () => selectPdf(e.path, row);
+    }
+    list.appendChild(row);
+  });
+}
+
+function selectPdf(path, rowEl) {
+  document.querySelectorAll('.file-row.selected').forEach(r => r.classList.remove('selected'));
+  rowEl.classList.add('selected');
+  selectedPdf = path;
+  document.getElementById('selectedBar').style.display = 'flex';
+  document.getElementById('selectedPath').textContent = path;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ───────────── কনভার্সন + লাইভ প্রগ্রেস ───────────── */
+async function startConvert() {
+  if (!selectedPdf) return;
+  const btn = document.getElementById('convertBtn');
+  btn.disabled = true;
+  document.getElementById('idleHint').style.display = 'none';
+  document.getElementById('resultBox').classList.remove('active');
+  document.getElementById('errorBox').classList.remove('active');
+  document.getElementById('progressWrap').classList.add('active');
+  document.getElementById('progressFill').style.width = '0%';
+  document.getElementById('statPage').textContent = '-';
+  document.getElementById('statCell').textContent = '-';
+  document.getElementById('statVoters').textContent = '0';
+  document.getElementById('statElapsed').textContent = '0 মিনিট';
+
+  try {
+    const res = await fetch(`${API}/api/convert`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({pdf_path: selectedPdf})
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'কনভার্সন শুরু করা যায়নি');
+    }
+    const data = await res.json();
+    activeJobId = data.job_id;
+    listenToJob(activeJobId);
+  } catch (e) {
+    showError(e.message);
+    btn.disabled = false;
+  }
+}
+
+function listenToJob(jobId) {
+  const es = new EventSource(`${API}/api/jobs/${jobId}/stream`);
+  es.onmessage = (evt) => {
+    const payload = JSON.parse(evt.data);
+    if (payload.progress) {
+      const p = payload.progress;
+      document.getElementById('statPage').textContent = `${p.page}/${p.total_pages}`;
+      document.getElementById('statCell').textContent = `${p.cell}/${p.total_cells}`;
+      document.getElementById('statVoters').textContent = p.voters;
+      document.getElementById('statElapsed').textContent = `${(p.elapsed/60).toFixed(1)} মিনিট`;
+      const pagePct = p.total_pages ? (p.page - 1 + (p.total_cells ? p.cell / p.total_cells : 0)) / p.total_pages * 100 : 0;
+      document.getElementById('progressFill').style.width = Math.min(100, Math.max(0, pagePct)) + '%';
+    }
+    if (payload.status === 'done') {
+      es.close();
+      document.getElementById('convertBtn').disabled = false;
+      document.getElementById('progressFill').style.width = '100%';
+      const r = payload.result;
+      const box = document.getElementById('resultBox');
+      box.classList.add('active');
+      if (r.output_file) {
+        box.innerHTML = `✅ <b>সম্পন্ন!</b> ${r.total_voters} জন ভোটার পাওয়া গেছে (${r.flagged} জন যাচাই প্রয়োজন), সময় লেগেছে ${r.elapsed_minutes} মিনিট।
+          <br><br><button class="primary" onclick="openInBrowse('${r.output_file.replace(/\\/g,'\\\\')}')">📊 ডেটা দেখুন ও এডিট করুন</button>`;
+      } else {
+        box.innerHTML = `⚠ কোনো ভোটার পাওয়া যায়নি। PDF-টি স্ক্যান করা/টেক্সট-লেয়ারবিহীন হতে পারে।`;
+      }
+    } else if (payload.status === 'error') {
+      es.close();
+      document.getElementById('convertBtn').disabled = false;
+      showError(payload.error || 'অজানা ত্রুটি');
+    }
+  };
+  es.onerror = () => {
+    es.close();
+    document.getElementById('convertBtn').disabled = false;
+  };
+}
+
+function showError(msg) {
+  const box = document.getElementById('errorBox');
+  box.classList.add('active');
+  box.textContent = '❌ ' + msg;
+}
+
+function openInBrowse(path) {
+  switchTab('browse');
+  loadFile(path);
+}
+
+/* ───────────── আউটপুট তালিকা ───────────── */
+async function refreshOutputs() {
+  const res = await fetch(`${API}/api/outputs`);
+  const files = await res.json();
+  const sel = document.getElementById('outputSelect');
+  sel.innerHTML = '<option value="">-- একটি ফাইল বাছাই করুন --</option>';
+  files.forEach(f => {
+    const opt = document.createElement('option');
+    opt.value = f.path;
+    opt.textContent = f.name;
+    sel.appendChild(opt);
+  });
+  if (currentFile) sel.value = currentFile;
+}
+
+function loadSelectedOutput() {
+  const path = document.getElementById('outputSelect').value;
+  if (path) loadFile(path);
+}
+
+/* ───────────── ডেটা টেবিল ───────────── */
+async function loadFile(path) {
+  const res = await fetch(`${API}/api/voters?file=${encodeURIComponent(path)}`);
+  if (!res.ok) { showToast('ফাইল লোড করা যায়নি'); return; }
+  const data = await res.json();
+  currentFile = path;
+  currentColumns = data.columns;
+  currentRows = data.rows;
+  dirtyEdits = {};
+  document.getElementById('outputSelect').value = path;
+
+  buildWardFilter();
+  renderTable();
+}
+
+function buildWardFilter() {
+  const wards = [...new Set(currentRows.map(r => r['ওয়ার্ড']).filter(Boolean))].sort();
+  const sel = document.getElementById('wardFilter');
+  sel.innerHTML = '<option value="">সব ওয়ার্ড</option>' + wards.map(w => `<option value="${w}">ওয়ার্ড ${w}</option>`).join('');
+}
+
+function renderTable() {
+  const headRow = document.getElementById('headRow');
+  headRow.innerHTML = currentColumns.map(c => `<th>${escapeHtml(c.label)}</th>`).join('');
+
+  applyFilters();
+}
+
+function matchesFilter(row, query, flaggedOnly, ward) {
+  if (flaggedOnly && !row['_flag']) return false;
+  if (ward && String(row['ওয়ার্ড']) !== ward) return false;
+  if (query) {
+    const hay = ['নাম','ভোটার_নং','পিতা','মাতা','ঠিকানা'].map(k => String(row[k] || '')).join(' ').toLowerCase();
+    if (!hay.includes(query)) return false;
+  }
+  return true;
+}
+
+function applyFilters() {
+  const query = document.getElementById('searchBox').value.trim().toLowerCase();
+  const flaggedOnly = document.getElementById('flaggedOnly').checked;
+  const ward = document.getElementById('wardFilter').value;
+
+  const filtered = currentRows.filter(r => matchesFilter(r, query, flaggedOnly, ward));
+  const body = document.getElementById('bodyRows');
+  body.innerHTML = '';
+
+  const frag = document.createDocumentFragment();
+  filtered.forEach(row => {
+    const tr = document.createElement('tr');
+    if (row['_flag']) tr.classList.add('flagged');
+    tr.dataset.row = row._row;
+    currentColumns.forEach(col => {
+      const td = document.createElement('td');
+      td.textContent = row[col.key] ?? '';
+      td.dataset.key = col.key;
+      if (col.key !== '_flag') {
+        td.contentEditable = 'true';
+        td.addEventListener('blur', onCellEdit);
+      }
+      tr.appendChild(td);
+    });
+    frag.appendChild(tr);
+  });
+  body.appendChild(frag);
+
+  const flaggedTotal = currentRows.filter(r => r['_flag']).length;
+  document.getElementById('summaryLine').textContent =
+    `মোট ${currentRows.length} জন ভোটার | ${filtered.length}টি ফলাফল দেখানো হচ্ছে | ${flaggedTotal}টি যাচাই প্রয়োজন`;
+}
+
+function onCellEdit(evt) {
+  const td = evt.target;
+  const tr = td.closest('tr');
+  const rowNum = parseInt(tr.dataset.row, 10);
+  const key = td.dataset.key;
+  const newVal = td.textContent.trim();
+  const rowObj = currentRows.find(r => r._row === rowNum);
+  const oldVal = String(rowObj ? (rowObj[key] ?? '') : '');
+
+  const editKey = `${rowNum}:${key}`;
+  if (newVal === oldVal) {
+    delete dirtyEdits[editKey];
+    td.classList.remove('dirty');
+  } else {
+    dirtyEdits[editKey] = {row: rowNum, key, value: newVal};
+    td.classList.add('dirty');
+  }
+  updateSaveBar();
+}
+
+function updateSaveBar() {
+  const n = Object.keys(dirtyEdits).length;
+  const bar = document.getElementById('saveBar');
+  bar.classList.toggle('active', n > 0);
+  document.getElementById('dirtyCount').textContent = `${n}টি পরিবর্তন`;
+}
+
+async function saveEdits() {
+  const edits = Object.values(dirtyEdits);
+  if (!edits.length) return;
+  const res = await fetch(`${API}/api/voters/save`, {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({file: currentFile, edits})
+  });
+  if (!res.ok) { showToast('সেভ ব্যর্থ হয়েছে'); return; }
+  showToast(`✅ ${edits.length}টি পরিবর্তন সেভ হয়েছে`);
+  dirtyEdits = {};
+  updateSaveBar();
+  await loadFile(currentFile);  // আপডেটেড ফ্ল্যাগ/স্টাইল নিয়ে রিলোড
+}
+
+function discardEdits() {
+  dirtyEdits = {};
+  updateSaveBar();
+  renderTable();
+}
+
+/* ───────────── init ───────────── */
+browseTo('');
+</script>
+
+</body>
+</html>

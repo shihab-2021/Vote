@@ -223,7 +223,7 @@ def flag_record(v):
 # ──────────────────────────────────────────
 # PDF প্রসেসর — গ্রিড টেবিল শনাক্তকরণ + OCR হাইব্রিড
 # ──────────────────────────────────────────
-def process_pdf(pdf_path, folder_meta=None):
+def process_pdf(pdf_path, folder_meta=None, progress_cb=None):
     voters = []
     meta   = (folder_meta or {}).copy()
     reader = get_ocr_reader()
@@ -240,6 +240,7 @@ def process_pdf(pdf_path, folder_meta=None):
                 meta.update({k: v for k, v in p1_meta.items() if v})
 
                 # পেজ ২+ — ভোটার গ্রিড
+                total_data_pages = len(pdf.pages) - 1
                 for page_idx in range(1, len(pdf.pages)):
                     pg = pdf.pages[page_idx]
                     try:
@@ -249,27 +250,28 @@ def process_pdf(pdf_path, folder_meta=None):
                         table = tables[0]
                         pil_img = render_page_image(fitz_doc[page_idx])
 
-                        for row in table.rows:
-                            for cell in row.cells:
-                                if not cell:
+                        cells = [cell for row in table.rows for cell in row.cells if cell]
+                        for cell_idx, cell in enumerate(cells, 1):
+                            try:
+                                digits = extract_cell_digits(pg, cell)
+                                ocr_text = ocr_region(pil_img, cell, OCR_ZOOM, reader)
+                                fields = parse_cell_ocr_fields(ocr_text)
+                                if not fields.get('নাম') or len(fields['নাম']) < 2:
                                     continue
-                                try:
-                                    digits = extract_cell_digits(pg, cell)
-                                    ocr_text = ocr_region(pil_img, cell, OCR_ZOOM, reader)
-                                    fields = parse_cell_ocr_fields(ocr_text)
-                                    if not fields.get('নাম') or len(fields['নাম']) < 2:
-                                        continue
-                                    v = {}
-                                    v.update(digits)
-                                    v.update(fields)
-                                    for k in ['লিঙ্গ', 'জেলা', 'উপজেলা', 'পৌরসভা',
-                                              'ইউনিয়ন', 'ওয়ার্ড', 'এলাকা_নং', 'এলাকা_নাম']:
-                                        v[k] = meta.get(k, '')
-                                    flags = flag_record(v)
-                                    v['_flag'] = '; '.join(flags)
-                                    voters.append(v)
-                                except Exception:
-                                    pass
+                                v = {}
+                                v.update(digits)
+                                v.update(fields)
+                                for k in ['লিঙ্গ', 'জেলা', 'উপজেলা', 'পৌরসভা',
+                                          'ইউনিয়ন', 'ওয়ার্ড', 'এলাকা_নং', 'এলাকা_নাম']:
+                                    v[k] = meta.get(k, '')
+                                flags = flag_record(v)
+                                v['_flag'] = '; '.join(flags)
+                                voters.append(v)
+                            except Exception:
+                                pass
+                            finally:
+                                if progress_cb:
+                                    progress_cb(page_idx, total_data_pages, cell_idx, len(cells), len(voters))
                     except Exception:
                         pass
             finally:
@@ -346,47 +348,54 @@ COLS = [
     ('source_file',    'উৎস ফাইল',        20),
     ('_flag',          'যাচাই প্রয়োজন',   30),
 ]
+COL_KEYS = [key for key, _, _ in COLS]
+CENTER_COLS = {1, 7, 8, 13, 14}  # ক্রমিক, তারিখ, লিঙ্গ, ওয়ার্ড, এলাকা নং
+
+# এক্সেল স্টাইল কনস্ট্যান্ট -- write_excel এবং app_server.py (এডিট সেভ) উভয়েই ব্যবহার করে,
+# যাতে ম্যানুয়ালি এডিট করা সারির স্টাইল লেখার সময় তৈরি স্টাইলের সাথে হুবহু মেলে
+HEADER_FILL  = PatternFill("solid", start_color="162B4D")
+HEADER_FONT  = Font(bold=True, color="FFFFFF", name="Arial", size=10)
+HEADER_ALIGN = Alignment(horizontal="center", vertical="center", wrap_text=True)
+THIN_SIDE    = Side(style="thin", color="DDDDDD")
+CELL_BORDER  = Border(left=THIN_SIDE, right=THIN_SIDE, top=THIN_SIDE, bottom=THIN_SIDE)
+ALT_FILL     = PatternFill("solid", start_color="EEF3FF")
+FLAG_FILL    = PatternFill("solid", start_color="FDE2E2")
+FLAG_FONT    = Font(name="Arial", size=9, color="B00020")
+DATA_FONT    = Font(name="Arial", size=9)
+CENTER_ALIGN = Alignment(horizontal="center", vertical="center")
+LEFT_ALIGN   = Alignment(horizontal="left",   vertical="center")
+
+def style_data_cell(cell, col_index, row_index, is_flagged):
+    """একটি ডেটা সেলে ধারাবাহিক স্টাইল প্রয়োগ করে -- write_excel ও এডিট-সেভ উভয় পথে ব্যবহৃত"""
+    cell.alignment = CENTER_ALIGN if col_index in CENTER_COLS else LEFT_ALIGN
+    cell.border = CELL_BORDER
+    if is_flagged:
+        cell.font = FLAG_FONT
+        cell.fill = FLAG_FILL
+    else:
+        cell.font = DATA_FONT
+        cell.fill = ALT_FILL if row_index % 2 == 0 else PatternFill(fill_type=None)
 
 def write_excel(voters, out_path, stats):
     wb = openpyxl.Workbook(write_only=False)
     ws = wb.active
     ws.title = "ভোটার তালিকা"
 
-    hfill  = PatternFill("solid", start_color="162B4D")
-    hfont  = Font(bold=True, color="FFFFFF", name="Arial", size=10)
-    halign = Alignment(horizontal="center", vertical="center", wrap_text=True)
-    thin   = Side(style="thin", color="DDDDDD")
-    brd    = Border(left=thin, right=thin, top=thin, bottom=thin)
-    altf   = PatternFill("solid", start_color="EEF3FF")
-    flagf  = PatternFill("solid", start_color="FDE2E2")
-    flagfont = Font(name="Arial", size=9, color="B00020")
-    dfont  = Font(name="Arial", size=9)
-    dctr   = Alignment(horizontal="center", vertical="center")
-    dlft   = Alignment(horizontal="left",   vertical="center")
-
     # হেডার
     for ci, (_, display, _w) in enumerate(COLS, 1):
         c = ws.cell(row=1, column=ci, value=display)
-        c.font = hfont; c.fill = hfill
-        c.alignment = halign; c.border = brd
+        c.font = HEADER_FONT; c.fill = HEADER_FILL
+        c.alignment = HEADER_ALIGN; c.border = CELL_BORDER
     ws.row_dimensions[1].height = 28
 
     # ডেটা
-    center_cols = {1, 7, 8, 13, 14}  # ক্রমিক, তারিখ, লিঙ্গ, ওয়ার্ড, এলাকা নং
     flagged_count = 0
     for ri, v in enumerate(voters, 2):
         is_flagged = bool(v.get('_flag'))
         if is_flagged: flagged_count += 1
         for ci, (key, _, _w) in enumerate(COLS, 1):
             c = ws.cell(row=ri, column=ci, value=v.get(key, ''))
-            c.alignment = dctr if ci in center_cols else dlft
-            c.border = brd
-            if is_flagged:
-                c.font = flagfont
-                c.fill = flagf
-            else:
-                c.font = dfont
-                if ri % 2 == 0: c.fill = altf
+            style_data_cell(c, ci, ri, is_flagged)
 
     # কলাম প্রস্থ
     for ci, (_, _, w) in enumerate(COLS, 1):
@@ -477,16 +486,31 @@ def main():
         eta_s   = (elapsed / idx * (total - idx)) if idx > 1 else 0
 
         short = f"{pdf_path.parent.name}/{pdf_path.name}"
-        print(f"  [{idx:5d}/{total}] {short[:55]:<55}", end=' ', flush=True)
+        print(f"  [{idx:5d}/{total}] {short[:55]:<55}")
 
-        vv = process_pdf(pdf_path, fm)
+        t_file0 = time.time()
+        last_print = [0.0]
+
+        def on_progress(page_idx, total_pages, cell_idx, total_cells, voter_count):
+            now = time.time()
+            if now - last_print[0] < 0.5 and cell_idx != total_cells:
+                return  # খুব ঘন ঘন আপডেট এড়ানো
+            last_print[0] = now
+            file_elapsed = now - t_file0
+            page_pct  = (cell_idx / total_cells * 100) if total_cells else 0
+            print(f"\r      পেজ {page_idx:3d}/{total_pages}  সেল {cell_idx:3d}/{total_cells} ({page_pct:5.1f}%)  "
+                  f"→ {voter_count:4d} জন সংগৃহীত  | {file_elapsed/60:5.1f} মিনিট চলছে   ",
+                  end='', flush=True)
+
+        vv = process_pdf(pdf_path, fm, progress_cb=on_progress)
+        print()  # প্রগ্রেস লাইন শেষ করে পরের লাইনে যাওয়া
         if vv:
             all_voters.extend(vv)
             success += 1
-            print(f"✓ {len(vv):4d} জন")
+            print(f"      ✓ সম্পন্ন: {len(vv):4d} জন | সময়: {(time.time()-t_file0)/60:.1f} মিনিট")
         else:
             failed += 1
-            print("⚠  ০ জন")
+            print("      ⚠  ০ জন")
 
         # চেকপয়েন্ট
         if idx % BATCH_SAVE == 0 and all_voters:
