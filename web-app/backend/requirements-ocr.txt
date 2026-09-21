@@ -1,0 +1,10 @@
+# PDF -> ভোটার ডেটা কনভার্সনের জন্য অতিরিক্ত (ভারী, ~1GB) dependency।
+# শুধু লোকাল ইনস্টলেশনে দরকার -- production (Railway)-এ install হয় না,
+# কারণ PDF ফাইল ইউজারের নিজের মেশিনে থাকে, cloud সার্ভারে না।
+#
+# ইনস্টল: pip install -r requirements.txt -r requirements-ocr.txt
+pdfplumber==0.11.10
+pymupdf==1.28.2
+easyocr
+numpy
+pillow

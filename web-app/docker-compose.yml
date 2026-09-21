@@ -1,0 +1,17 @@
+# শুধু লোকাল ডেভেলপমেন্টের জন্য -- প্রোডাকশনে Railway-এর ম্যানেজড Postgres ব্যবহার হয়।
+# চালু করুন: docker compose up -d
+# তারপর backend/.env-এ DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/voters
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: voters
+    ports:
+      - "5432:5432"
+    volumes:
+      - voter_db_data:/var/lib/postgresql/data
+
+volumes:
+  voter_db_data:
