@@ -13,13 +13,16 @@ from ..auth import get_current_user
 from ..db import get_db
 from ..models import User, Voter
 from ..voter_rules import COLS
+from .voters import _apply_generic_filters
 
 router = APIRouter(prefix="/api/export", tags=["export"])
 
 EXPORT_COLS = [(field, label) for _, label, field in COLS if field] + [("flag_reasons", "যাচাই প্রয়োজন")]
 
 
-def _filtered_voters(db: Session, search: str, ward: str, upazila: str, flagged: bool | None):
+def _filtered_voters(
+    db: Session, search: str, ward: str, upazila: str, flagged: bool | None, filters: str = "",
+):
     q = select(Voter).where(Voter.deleted_at.is_(None))
     if search:
         like = f"%{search}%"
@@ -31,6 +34,7 @@ def _filtered_voters(db: Session, search: str, ward: str, upazila: str, flagged:
         q = q.where(Voter.upazila == upazila)
     if flagged is not None:
         q = q.where(Voter.is_flagged == flagged)
+    q = _apply_generic_filters(q, filters, db)
     q = q.order_by(Voter.name)
     return db.scalars(q).all()
 
@@ -46,10 +50,11 @@ def export_voters(
     format: str = "xlsx",
     search: str = "", ward: str = "", upazila: str = "",
     flagged: bool | None = None,
+    filters: str = "",
     db: Session = Depends(get_db),
     _user: User = Depends(get_current_user),
 ):
-    voters = _filtered_voters(db, search, ward, upazila, flagged)
+    voters = _filtered_voters(db, search, ward, upazila, flagged, filters)
 
     if format == "csv":
         buf = io.StringIO()

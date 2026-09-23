@@ -28,6 +28,11 @@ except ImportError as e:
 
 OCR_ZOOM = 3
 
+
+class ConversionCancelled(Exception):
+    """ব্যবহারকারী "থামান" চাপলে process_pdf() এই এক্সসেপশন তুলে মাঝপথে থেমে যায়।"""
+
+
 _OCR_READER = None
 
 
@@ -133,9 +138,11 @@ def parse_cell_ocr_fields(ocr_text):
     }
 
 
-def process_pdf(pdf_path, folder_meta=None, progress_cb=None):
+def process_pdf(pdf_path, folder_meta=None, progress_cb=None, cancel_event=None):
     """একটা PDF থেকে ভোটার dict-এর লিস্ট বের করে (বাংলা কী সহ, voter_rules.COLS-এর মতো)।
-    progress_cb(page_idx, total_pages, cell_idx, total_cells, voter_count) -- ঐচ্ছিক লাইভ প্রগ্রেস।"""
+    progress_cb(page_idx, total_pages, cell_idx, total_cells, voter_count) -- ঐচ্ছিক লাইভ প্রগ্রেস।
+    cancel_event -- ঐচ্ছিক threading.Event; সেট হলে পরের সেল প্রসেস করার আগেই
+    ConversionCancelled তুলে থেমে যায় (ব্যবহারকারীর "থামান" অনুরোধ)।"""
     if not OCR_AVAILABLE:
         raise RuntimeError(f"OCR লাইব্রেরি ইনস্টল করা নেই: {OCR_IMPORT_ERROR}")
 
@@ -149,6 +156,8 @@ def process_pdf(pdf_path, folder_meta=None, progress_cb=None):
 
         fitz_doc = fitz.open(str(pdf_path))
         try:
+            if cancel_event is not None and cancel_event.is_set():
+                raise ConversionCancelled()
             p1_meta = parse_page1(pdf.pages[0], fitz_doc[0], folder_meta)
             meta.update({k: v for k, v in p1_meta.items() if v})
 
@@ -164,6 +173,8 @@ def process_pdf(pdf_path, folder_meta=None, progress_cb=None):
 
                     cells = [cell for row in table.rows for cell in row.cells if cell]
                     for cell_idx, cell in enumerate(cells, 1):
+                        if cancel_event is not None and cancel_event.is_set():
+                            raise ConversionCancelled()
                         try:
                             digits = extract_cell_digits(pg, cell)
                             ocr_text = ocr_region(pil_img, cell, OCR_ZOOM, reader)
@@ -183,6 +194,8 @@ def process_pdf(pdf_path, folder_meta=None, progress_cb=None):
                         finally:
                             if progress_cb:
                                 progress_cb(page_idx, total_data_pages, cell_idx, len(cells), len(voters))
+                except ConversionCancelled:
+                    raise
                 except Exception:
                     pass
         finally:

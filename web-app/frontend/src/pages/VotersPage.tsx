@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Search, Download, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { Search, Download, ChevronLeft, ChevronRight, Loader2, X, Plus, MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -17,7 +17,25 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { EditableCell } from "@/components/EditableCell";
 import { RecordDrawer } from "@/components/RecordDrawer";
-import { api, type Voter, type VoterListResponse, type StatsSummary } from "@/lib/api";
+import {
+  api, VOTER_LABELS, type Voter, type VoterListResponse, type StatsSummary, type FieldDef,
+} from "@/lib/api";
+
+// "Find By" ফিল্ড তালিকা থেকে যেগুলোর নিজস্ব দ্রুত-ফিল্টার ইতিমধ্যে আলাদাভাবে আছে (ওয়ার্ড ড্রপডাউন,
+// ঠিকানা অটোকমপ্লিট) সেগুলো এখানে বাদ দেওয়া হয়, যাতে একই ফিল্টার দুই জায়গায় ডুপ্লিকেট না হয়
+const FIND_BY_EXCLUDE = new Set(["ward", "address"]);
+
+interface FindByRow {
+  field: string;
+  value: string;
+}
+
+interface FindByFieldOption {
+  key: string;
+  label: string;
+  type: "text" | "number" | "date" | "boolean" | "select";
+  options: string[] | null;
+}
 
 const EDIT_COLS: { key: keyof Voter; label: string; width?: string }[] = [
   { key: "name", label: "নাম" },
@@ -41,6 +59,14 @@ export function VotersPage() {
   const [detailVoter, setDetailVoter] = useState<Voter | null>(null);
   const pageSize = 50;
 
+  // ঠিকানা অটোকমপ্লিট -- একটা বিদ্যমান ঠিকানা বেছে নিলে সেটা `address`-এ (হুবহু মিল) সেভ হয়
+  const [address, setAddress] = useState("");
+  const [addressInput, setAddressInput] = useState("");
+  const [addressOpen, setAddressOpen] = useState(false);
+
+  // "Find By" -- ফিল্ড বাছাই করে যেকোনো কোর/কাস্টম ফিল্ড দিয়ে ফিল্টার যোগ করা যায় (AND মিলিয়ে)
+  const [findByRows, setFindByRows] = useState<FindByRow[]>([]);
+
   const { data: wardStats } = useQuery({
     queryKey: ["stats-summary"],
     queryFn: () => api.get<StatsSummary>("/stats/summary").then((r) => r.data),
@@ -50,9 +76,55 @@ export function VotersPage() {
     () => Object.keys(wardStats?.by_ward ?? {}).sort(),
     [wardStats]
   );
+  const genderOptions = useMemo(
+    () => Object.keys(wardStats?.by_gender ?? {}).sort(),
+    [wardStats]
+  );
+
+  const { data: fieldDefs } = useQuery({
+    queryKey: ["field-defs"],
+    queryFn: () => api.get<FieldDef[]>("/field-defs").then((r) => r.data),
+    staleTime: 60_000,
+  });
+  const findByFieldOptions: FindByFieldOption[] = useMemo(() => {
+    const core = Object.entries(VOTER_LABELS)
+      .filter(([key]) => !FIND_BY_EXCLUDE.has(key))
+      .map(([key, label]) => ({ key, label, type: "text" as const, options: null }));
+    const custom = (fieldDefs ?? []).map((f) => ({
+      key: f.key, label: f.label, type: f.field_type, options: f.options,
+    }));
+    return [...core, ...custom];
+  }, [fieldDefs]);
+
+  const { data: addressSuggestions } = useQuery({
+    queryKey: ["voter-addresses", addressInput],
+    queryFn: () => api.get<string[]>("/voters/addresses", {
+      params: { q: addressInput || undefined, limit: 15 },
+    }).then((r) => r.data),
+    enabled: addressOpen,
+    staleTime: 30_000,
+  });
+
+  function addFindByRow() {
+    setFindByRows((rows) => [...rows, { field: "", value: "" }]);
+  }
+  function updateFindByRow(idx: number, patch: Partial<FindByRow>) {
+    setFindByRows((rows) => rows.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
+    setPage(1);
+  }
+  function removeFindByRow(idx: number) {
+    setFindByRows((rows) => rows.filter((_, i) => i !== idx));
+    setPage(1);
+  }
+
+  const filtersPayload = useMemo(() => {
+    const rows = findByRows.filter((r) => r.field && r.value);
+    const combined = address ? [{ field: "address", value: address }, ...rows] : rows;
+    return combined.length ? JSON.stringify(combined) : undefined;
+  }, [address, findByRows]);
 
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ["voters", { search, ward, flaggedOnly, page }],
+    queryKey: ["voters", { search, ward, flaggedOnly, page, filtersPayload }],
     queryFn: () =>
       api
         .get<VoterListResponse>("/voters", {
@@ -60,6 +132,7 @@ export function VotersPage() {
             search: search || undefined,
             ward: ward || undefined,
             flagged: flaggedOnly ? true : undefined,
+            filters: filtersPayload,
             page,
             page_size: pageSize,
           },
@@ -103,6 +176,7 @@ export function VotersPage() {
         search: search || undefined,
         ward: ward || undefined,
         flagged: flaggedOnly ? true : undefined,
+        filters: filtersPayload,
       },
       responseType: "blob",
     });
@@ -180,6 +254,117 @@ export function VotersPage() {
           শুধু যাচাই প্রয়োজন
         </label>
         {isFetching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+      </div>
+
+      <div className="flex flex-wrap items-start gap-3">
+        <div className="relative min-w-[260px]">
+          <MapPin className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="ঠিকানা/বাড়ি দিয়ে খুঁজুন..."
+            className="pl-8 pr-8"
+            value={address || addressInput}
+            onFocus={() => setAddressOpen(true)}
+            onBlur={() => setTimeout(() => setAddressOpen(false), 150)}
+            onChange={(e) => {
+              setAddress("");
+              setAddressInput(e.target.value);
+              setAddressOpen(true);
+              setPage(1);
+            }}
+          />
+          {address && (
+            <button
+              type="button"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                setAddress("");
+                setAddressInput("");
+                setPage(1);
+              }}
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+          {addressOpen && !address && (addressSuggestions?.length ?? 0) > 0 && (
+            <div className="absolute z-20 mt-1 max-h-64 w-full min-w-[320px] overflow-y-auto rounded-lg border bg-card shadow-lg">
+              {addressSuggestions!.map((a) => (
+                <div
+                  key={a}
+                  className="cursor-pointer px-3 py-1.5 text-xs hover:bg-accent"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    setAddress(a);
+                    setAddressInput("");
+                    setAddressOpen(false);
+                    setPage(1);
+                  }}
+                >
+                  {a}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-1 flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={addFindByRow}>
+              <Plus className="h-3.5 w-3.5" /> Find By ফিল্টার যোগ করুন
+            </Button>
+          </div>
+          {findByRows.map((row, idx) => {
+            const fieldDef = findByFieldOptions.find((f) => f.key === row.field);
+            const isGender = row.field === "gender";
+            const selectOptions = isGender ? genderOptions : fieldDef?.type === "select" ? fieldDef.options ?? [] : null;
+            return (
+              <div key={idx} className="flex flex-wrap items-center gap-2">
+                <Select
+                  value={row.field || "__none__"}
+                  onValueChange={(v) => updateFindByRow(idx, { field: !v || v === "__none__" ? "" : v, value: "" })}
+                >
+                  <SelectTrigger className="w-[170px]">
+                    <SelectValue placeholder="ফিল্ড বাছাই করুন">
+                      {(v: string | null) => findByFieldOptions.find((f) => f.key === v)?.label ?? "ফিল্ড বাছাই করুন"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">ফিল্ড বাছাই করুন</SelectItem>
+                    {findByFieldOptions.map((f) => (
+                      <SelectItem key={f.key} value={f.key}>{f.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {selectOptions ? (
+                  <Select value={row.value || "__none__"} onValueChange={(v) => updateFindByRow(idx, { value: !v || v === "__none__" ? "" : v })}>
+                    <SelectTrigger className="w-[160px]">
+                      <SelectValue placeholder="মান বাছাই করুন" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">মান বাছাই করুন</SelectItem>
+                      {selectOptions.map((o) => (
+                        <SelectItem key={o} value={o}>{o}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    className="w-[160px]"
+                    placeholder="মান লিখুন..."
+                    value={row.value}
+                    disabled={!row.field}
+                    onChange={(e) => updateFindByRow(idx, { value: e.target.value })}
+                  />
+                )}
+
+                <Button variant="ghost" size="icon" onClick={() => removeFindByRow(idx)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <div className="overflow-auto rounded-lg border">

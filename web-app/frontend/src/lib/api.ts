@@ -133,6 +133,43 @@ export interface ConvertCommitResult {
   total_rows: number;
 }
 
+export type ConvertJobStatus = "starting" | "running" | "cancelling" | "cancelled" | "done" | "error";
+
+export interface ConvertActiveResponse {
+  job_id: string | null;
+  status?: ConvertJobStatus;
+  progress?: ConvertProgress | null;
+  result?: ConvertResult | null;
+  error?: string | null;
+}
+
+export type BatchFileStatus = "pending" | "running" | "done" | "error" | "cancelled" | "skipped";
+
+export interface BatchFileEntry {
+  path: string;
+  status: BatchFileStatus;
+  total_voters?: number;
+  flagged?: number;
+  inserted?: number;
+  updated?: number;
+  elapsed_minutes?: number;
+  excel_path?: string | null;
+  error?: string;
+}
+
+export type BatchStatus = "running" | "cancelling" | "cancelled" | "done";
+
+export interface BatchActiveResponse {
+  batch_id: string | null;
+  status?: BatchStatus;
+  root?: string;
+  total_files?: number;
+  current_index?: number | null;
+  current_progress?: ConvertProgress | null;
+  files?: BatchFileEntry[];
+  started_at?: string;
+}
+
 export const VOTER_LABELS: Record<string, string> = {
   serial_no: "ক্রমিক নং",
   name: "নাম",
