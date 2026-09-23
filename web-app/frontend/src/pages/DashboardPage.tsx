@@ -3,7 +3,7 @@ import { Users, AlertTriangle } from "lucide-react";
 import { api, type StatsSummary } from "@/lib/api";
 import { StatCard } from "@/components/StatCard";
 import { RankedBarChart } from "@/components/RankedBarChart";
-import { ProportionBar } from "@/components/ProportionBar";
+import { DonutChart } from "@/components/DonutChart";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function DashboardPage() {
@@ -32,12 +32,13 @@ export function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <StatCard label="মোট ভোটার" value={data.total_voters} icon={Users} />
+        <StatCard label="মোট ভোটার" value={data.total_voters} icon={Users} sparkline />
         <StatCard
           label="যাচাই প্রয়োজন"
           value={data.flagged_count}
           icon={AlertTriangle}
           tone="warning"
+          sparkline
         />
       </div>
 
@@ -46,7 +47,7 @@ export function DashboardPage() {
         <RankedBarChart title="উপজেলা অনুযায়ী ভোটার" data={data.by_upazila} />
       </div>
 
-      <ProportionBar title="লিঙ্গ ভিত্তিক বিভাজন" data={data.by_gender} />
+      <DonutChart title="লিঙ্গ ভিত্তিক বিভাজন" data={data.by_gender} />
     </div>
   );
 }

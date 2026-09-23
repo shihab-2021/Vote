@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { api, type FieldDef, type Voter, VOTER_LABELS } from "@/lib/api";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
 interface RecordDrawerProps {
   voter: Voter | null;
@@ -19,6 +21,7 @@ const CORE_KEYS = Object.keys(VOTER_LABELS) as (keyof typeof VOTER_LABELS)[];
 
 export function RecordDrawer({ voter, onClose }: RecordDrawerProps) {
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   const [form, setForm] = useState<Record<string, string>>({});
   const [extra, setExtra] = useState<Record<string, string>>({});
 
@@ -48,7 +51,13 @@ export function RecordDrawer({ voter, onClose }: RecordDrawerProps) {
 
   return (
     <Sheet open={!!voter} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
+      <SheetContent
+        side={isMobile ? "bottom" : "right"}
+        className={cn(
+          "overflow-y-auto",
+          isMobile ? "max-h-[92vh] w-full rounded-t-2xl" : "w-full sm:max-w-lg"
+        )}
+      >
         {voter && (
           <>
             <SheetHeader>
