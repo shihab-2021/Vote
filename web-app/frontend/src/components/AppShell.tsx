@@ -9,6 +9,8 @@ import {
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { StampBadge } from "@/components/motifs/StampBadge";
+import { PerforatedDivider } from "@/components/motifs/PerforatedDivider";
 import { useAuth } from "@/auth/AuthContext";
 import { cn } from "@/lib/utils";
 
@@ -53,70 +55,82 @@ export function AppShell() {
       </a>
       {/* ডেস্কটপ/ট্যাবলেট -- বিদ্যমান sidebar অপরিবর্তিত */}
       <Sidebar collapsible="icon" className="hidden md:flex">
-        <SidebarHeader>
-          <div className="flex items-center gap-2 px-2 py-1.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <Vote className="h-4 w-4" />
+        {/* isolate + -z-10 দানা-টেক্সচার নিজের স্ট্যাকিং কনটেক্সটে রাখে, যাতে এটা bg-sidebar-এর
+            উপরে কিন্তু নিচের হেডার/মেনু/ফুটার টেক্সটের নিচে থাকে (relative না দিলে এটা উপরে
+            চলে এসে সব ঢেকে দিত -- absolute পজিশনড এলিমেন্ট সবসময় static সিবলিং-এর উপরে আঁকা হয়) */}
+        <div className="relative isolate flex h-full flex-col">
+          <div className="grain-overlay pointer-events-none absolute inset-0 -z-10" aria-hidden="true" />
+          <SidebarHeader className="border-b border-kraft/25">
+            <div className="flex items-center gap-2 px-2 py-1.5">
+              <StampBadge icon={Vote} size="sm" className="-rotate-3 group-data-[collapsible=icon]:rotate-0" />
+              <div className="flex flex-col leading-tight group-data-[collapsible=icon]:hidden">
+                <span className="font-heading text-sm font-semibold">ভোটার তালিকা</span>
+                <span className="text-xs text-muted-foreground">ম্যানেজমেন্ট অ্যাপ</span>
+              </div>
             </div>
-            <div className="flex flex-col leading-tight group-data-[collapsible=icon]:hidden">
-              <span className="text-sm font-semibold">ভোটার তালিকা</span>
-              <span className="text-xs text-muted-foreground">ম্যানেজমেন্ট অ্যাপ</span>
+          </SidebarHeader>
+          <SidebarContent>
+            <SidebarGroup>
+              <SidebarGroupLabel className="tracking-wide text-kraft uppercase">মেনু</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {visibleNav.map((item) => {
+                    const active = isActivePath(item, location.pathname);
+                    return (
+                      <SidebarMenuItem key={item.to}>
+                        {active && (
+                          <span
+                            className="absolute top-1.5 bottom-1.5 left-0 w-1 rounded-full bg-primary group-data-[collapsible=icon]:hidden"
+                            aria-hidden="true"
+                          />
+                        )}
+                        <SidebarMenuButton
+                          render={<Link to={item.to} />}
+                          isActive={active}
+                          tooltip={item.label}
+                        >
+                          <item.icon />
+                          <span>{item.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </SidebarContent>
+          <PerforatedDivider className="mx-2 group-data-[collapsible=icon]:hidden" />
+          <SidebarFooter>
+            <div className="flex items-center gap-2 px-2 py-1.5 group-data-[collapsible=icon]:justify-center">
+              <Avatar className="h-7 w-7">
+                <AvatarFallback className="text-xs">
+                  {user?.username.slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex flex-1 flex-col leading-tight group-data-[collapsible=icon]:hidden">
+                <span className="text-sm font-medium">{user?.username}</span>
+                <span className="text-xs text-muted-foreground capitalize">{user?.role}</span>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 group-data-[collapsible=icon]:hidden"
+                onClick={() => logout()}
+                title="লগআউট"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
             </div>
-          </div>
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupLabel>মেনু</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {visibleNav.map((item) => (
-                  <SidebarMenuItem key={item.to}>
-                    <SidebarMenuButton
-                      render={<Link to={item.to} />}
-                      isActive={isActivePath(item, location.pathname)}
-                      tooltip={item.label}
-                    >
-                      <item.icon />
-                      <span>{item.label}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </SidebarContent>
-        <SidebarFooter>
-          <div className="flex items-center gap-2 px-2 py-1.5 group-data-[collapsible=icon]:justify-center">
-            <Avatar className="h-7 w-7">
-              <AvatarFallback className="text-xs">
-                {user?.username.slice(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex flex-1 flex-col leading-tight group-data-[collapsible=icon]:hidden">
-              <span className="text-sm font-medium">{user?.username}</span>
-              <span className="text-xs text-muted-foreground capitalize">{user?.role}</span>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 group-data-[collapsible=icon]:hidden"
-              onClick={() => logout()}
-              title="লগআউট"
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </div>
-        </SidebarFooter>
+          </SidebarFooter>
+        </div>
       </Sidebar>
 
       <SidebarInset>
         {/* মোবাইল -- কম্প্যাক্ট টপ বার (ব্র্যান্ড + প্রোফাইল), নেভিগেশন নিচের ট্যাব-বারে */}
-        <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b bg-card px-4 md:hidden">
+        <header className="grain-overlay relative flex h-14 shrink-0 items-center justify-between gap-2 border-b border-kraft/25 bg-card px-4 md:hidden">
           <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <Vote className="h-3.5 w-3.5" />
-            </div>
-            <span className="text-sm font-semibold">ভোটার তালিকা</span>
+            <StampBadge icon={Vote} size="sm" className="-rotate-3" />
+            <span className="font-heading text-sm font-semibold">ভোটার তালিকা</span>
           </div>
           <button
             onClick={() => logout()}
@@ -135,7 +149,7 @@ export function AppShell() {
           <SidebarTrigger />
         </header>
 
-        <main id="main-content" tabIndex={-1} className="flex-1 overflow-auto p-4 pb-24 md:p-6 md:pb-6">
+        <main id="main-content" tabIndex={-1} className="paper-texture flex-1 overflow-auto p-4 pb-24 md:p-6 md:pb-6">
           <Outlet />
         </main>
 

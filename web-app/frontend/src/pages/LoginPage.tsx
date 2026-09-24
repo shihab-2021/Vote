@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { StampBadge } from "@/components/motifs/StampBadge";
 import { useAuth } from "@/auth/AuthContext";
 
 export function LoginPage() {
@@ -32,14 +33,12 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-primary/5 via-background to-background p-4">
+    <div className="paper-texture flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-sm overflow-hidden py-0">
         <div className="h-1.5 w-full bg-gradient-to-r from-primary via-primary to-destructive" />
         <CardHeader className="items-center pt-6 text-center">
-          <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
-            <Vote className="h-7 w-7" />
-          </div>
-          <CardTitle className="text-xl">ভোটার তালিকা অ্যাপ</CardTitle>
+          <StampBadge icon={Vote} className="mb-2 -rotate-3" />
+          <CardTitle className="font-heading text-xl">ভোটার তালিকা অ্যাপ</CardTitle>
           <CardDescription>লগইন করে চালিয়ে যান</CardDescription>
         </CardHeader>
         <CardContent className="pb-6">
@@ -71,7 +70,7 @@ export function LoginPage() {
             {error && (
               <p id="login-error" role="alert" className="text-sm text-destructive">{error}</p>
             )}
-            <Button type="submit" className="h-11 w-full text-base" disabled={loading}>
+            <Button type="submit" className="stamp-press h-11 w-full text-base" disabled={loading}>
               {loading && <Loader2 className="h-4 w-4 animate-spin" />}
               লগইন
             </Button>

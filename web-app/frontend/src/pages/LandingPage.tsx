@@ -1,6 +1,8 @@
 import { useNavigate } from "react-router-dom";
-import { Vote, Search, Printer, MapPin, ShieldCheck, IdCard } from "lucide-react";
+import { Vote, Search, Printer, MapPin, ShieldCheck, IdCard, Users, Fingerprint, Sparkles, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { StampBadge } from "@/components/motifs/StampBadge";
+import { PerforatedDivider } from "@/components/motifs/PerforatedDivider";
 
 const FEATURES = [
   {
@@ -25,25 +27,34 @@ const FEATURES = [
   },
 ];
 
+// ভোটের দিনের ছোট ছোট পরিচিত স্মৃতি -- আসল ঐতিহাসিক ছবি নয় (আইনগতভাবে ব্যবহারযোগ্য এমন ছবি
+// হাতে নেই), শুধু মূল আইকন দিয়ে তৈরি সংক্ষিপ্ত, রাজনৈতিকভাবে নিরপেক্ষ স্মৃতিচারণ
+const MEMORIES = [
+  { icon: Users, title: "ভোরবেলা লাইনে দাঁড়ানো", detail: "কেন্দ্র খোলার আগেই লম্বা লাইন" },
+  { icon: Fingerprint, title: "আঙুলে কালির দাগ", detail: "ভোট দেওয়ার সেই চেনা প্রমাণ" },
+  { icon: Sparkles, title: "প্রথম ভোটের উত্তেজনা", detail: "জীবনের প্রথমবার ভোট দেওয়ার মুহূর্ত" },
+  { icon: Mail, title: "ভোটার কার্ড হাতে পাওয়া", detail: "নতুন কার্ড হাতে পাওয়ার অপেক্ষা" },
+];
+
 /** সাইট-এর মূল ("/") পাবলিক ল্যান্ডিং পেজ -- না লগইন করা ভিজিটর প্রথমে এটাই দেখেন। AppShell/সাইডবার
  * নেই -- CitizenFindPage/LoginPage-এর মতোই স্বতন্ত্র, পাবলিক লেআউট। লগইন করা ব্যবহারকারীদের জন্য
  * App.tsx-এর HomeRoute এই পেজ না দেখিয়ে সরাসরি /dashboard-এ পাঠিয়ে দেয়। */
 export function LandingPage() {
   const navigate = useNavigate();
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-b from-primary/5 via-background to-background">
+    <div className="paper-texture flex min-h-screen flex-col">
       <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 p-4 pt-12 sm:pt-20">
         <div className="flex flex-col items-center gap-3 text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
-            <Vote className="h-8 w-8" />
-          </div>
-          <h1 className="text-2xl font-semibold sm:text-3xl">ভোটার তথ্য খুঁজুন, সংগঠিত করুন, বিতরণ করুন</h1>
+          <StampBadge icon={Vote} size="lg" className="-rotate-3" />
+          <h1 className="font-heading text-2xl font-semibold sm:text-3xl">
+            ভোটার তথ্য খুঁজুন, সংগঠিত করুন, বিতরণ করুন
+          </h1>
           <p className="max-w-xl text-sm text-muted-foreground sm:text-base">
             নির্বাচনের আগে ও নির্বাচনের দিনে ভোটার তথ্য দ্রুত খুঁজে পেতে, প্রস্তুত করতে ও বিতরণ করতে
             সাহায্য করার জন্য তৈরি একটি ভোটার তথ্য ও সহায়তা প্ল্যাটফর্ম।
           </p>
           <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-            <Button size="lg" className="h-12 px-6 text-base" onClick={() => navigate("/find")}>
+            <Button size="lg" className="stamp-press h-12 px-6 text-base" onClick={() => navigate("/find")}>
               আমার ভোটার তথ্য খুঁজুন
             </Button>
             <Button size="lg" variant="outline" className="h-12 px-6 text-base" onClick={() => navigate("/login")}>
@@ -54,7 +65,7 @@ export function LandingPage() {
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {FEATURES.map((f) => (
-            <div key={f.title} className="flex gap-3 rounded-2xl border bg-card p-4 shadow-sm">
+            <div key={f.title} className="flex gap-3 rounded-2xl border border-kraft/30 bg-card p-4 shadow-sm">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                 <f.icon className="h-4.5 w-4.5" />
               </div>
@@ -65,6 +76,25 @@ export function LandingPage() {
             </div>
           ))}
         </div>
+
+        <PerforatedDivider />
+
+        <div className="space-y-3">
+          <h2 className="font-heading text-center text-lg font-semibold text-ink">ভোটের দিনের স্মৃতি</h2>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {MEMORIES.map((m) => (
+              <div key={m.title} className="flex flex-col items-center gap-2 text-center">
+                <StampBadge icon={m.icon} size="sm" className="bg-stamp" />
+                <div>
+                  <p className="text-xs font-medium">{m.title}</p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">{m.detail}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <PerforatedDivider />
 
         <div className="flex items-start gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4">
           <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />

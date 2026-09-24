@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, ListPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { WarmEmptyState } from "@/components/motifs/WarmEmptyState";
 import { api, type FieldDef } from "@/lib/api";
 
 const TYPE_LABELS: Record<string, string> = {
@@ -117,8 +118,8 @@ export function FieldsPage() {
           <TableBody>
             {!fields?.length && (
               <TableRow>
-                <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
-                  কোনো কাস্টম ফিল্ড নেই
+                <TableCell colSpan={4}>
+                  <WarmEmptyState icon={ListPlus} title="কোনো কাস্টম ফিল্ড নেই" />
                 </TableCell>
               </TableRow>
             )}

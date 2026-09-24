@@ -18,7 +18,7 @@ const TONE_COLOR: Record<"default" | "warning", string> = {
 export function StatCard({ label, value, icon: Icon, tone = "default", sparkline = false }: StatCardProps) {
   const color = TONE_COLOR[tone];
   return (
-    <div className="rounded-xl border bg-card p-4 shadow-sm">
+    <div className="card-lift rounded-xl border border-kraft/25 bg-card p-4 shadow-sm">
       <div className="flex items-center justify-between">
         <span className="text-sm text-muted-foreground">{label}</span>
         <Icon

@@ -4,6 +4,7 @@ import { Search, MapPin, IdCard, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { RecordDrawer } from "@/components/RecordDrawer";
+import { WarmEmptyState } from "@/components/motifs/WarmEmptyState";
 import { cn } from "@/lib/utils";
 import { api, type Voter, type VoterListResponse } from "@/lib/api";
 
@@ -53,10 +54,12 @@ export function QuickSearchPage() {
       )}
 
       {trimmed && !isFetching && data?.items.length === 0 && (
-        <div className="flex flex-col items-center gap-1 rounded-xl border border-dashed py-16 text-center text-muted-foreground">
-          <p className="font-medium text-foreground">কোনো ফলাফল নেই</p>
-          <p className="text-sm">অন্য নাম, ভোটার নং বা ঠিকানা দিয়ে চেষ্টা করুন</p>
-        </div>
+        <WarmEmptyState
+          icon={Search}
+          title="কোনো ফলাফল নেই"
+          subtitle="অন্য নাম, ভোটার নং বা ঠিকানা দিয়ে চেষ্টা করুন"
+          className="rounded-xl border border-dashed"
+        />
       )}
 
       <div className="space-y-2">

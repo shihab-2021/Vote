@@ -26,6 +26,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { EditableCell } from "@/components/EditableCell";
 import { RecordDrawer } from "@/components/RecordDrawer";
+import { WarmEmptyState } from "@/components/motifs/WarmEmptyState";
 import { cn } from "@/lib/utils";
 import {
   api, VOTER_LABELS, type Voter, type VoterListResponse, type StatsSummary, type FieldDef,
@@ -580,16 +581,18 @@ export function VotersPage() {
 
       {/* খালি ফলাফল -- একটাই শেয়ার্ড স্টেট, সব ব্রেকপয়েন্টে */}
       {!isLoading && data?.items.length === 0 && (
-        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed py-16 text-center">
-          <Users2 className="h-8 w-8 text-muted-foreground/50" />
-          <p className="font-medium">কোনো ফলাফল নেই</p>
-          <p className="text-sm text-muted-foreground">ফিল্টার পরিবর্তন করে আবার চেষ্টা করুন</p>
+        <WarmEmptyState
+          icon={Users2}
+          title="কোনো ফলাফল নেই"
+          subtitle="ফিল্টার পরিবর্তন করে আবার চেষ্টা করুন"
+          className="rounded-xl border border-dashed"
+        >
           {activeFilterChips.length > 0 && (
             <Button variant="outline" size="sm" className="mt-2" onClick={clearAllFilters}>
               সব ফিল্টার মুছুন
             </Button>
           )}
-        </div>
+        </WarmEmptyState>
       )}
 
       {/* মোবাইল -- কার্ড লিস্ট; ট্যাপ করলে RecordDrawer-এ পূর্ণ বিস্তারিত/এডিট */}

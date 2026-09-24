@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, X, Pencil } from "lucide-react";
+import { Plus, X, Pencil, UserCog } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,7 @@ import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter,
 } from "@/components/ui/sheet";
 import { Checkbox } from "@/components/ui/checkbox";
+import { WarmEmptyState } from "@/components/motifs/WarmEmptyState";
 import { api, type RoleDef, type User } from "@/lib/api";
 
 const SCOPE_FIELD_OPTIONS = [
@@ -189,7 +190,9 @@ export function UsersPage() {
           <TableBody>
             {!users?.length && (
               <TableRow>
-                <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">কোনো ব্যবহারকারী নেই</TableCell>
+                <TableCell colSpan={5}>
+                  <WarmEmptyState icon={UserCog} title="কোনো ব্যবহারকারী নেই" />
+                </TableCell>
               </TableRow>
             )}
             {users?.map((u) => (

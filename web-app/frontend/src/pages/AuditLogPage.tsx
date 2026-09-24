@@ -1,7 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
+import { ScrollText } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { WarmEmptyState } from "@/components/motifs/WarmEmptyState";
 import { api, type ActivityLogResponse } from "@/lib/api";
 
 const ACTION_LABEL: Record<string, string> = {
@@ -51,7 +53,9 @@ export function AuditLogPage() {
           <TableBody>
             {!isLoading && !data?.items.length && (
               <TableRow>
-                <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">কোনো লগ নেই</TableCell>
+                <TableCell colSpan={5}>
+                  <WarmEmptyState icon={ScrollText} title="কোনো লগ নেই" />
+                </TableCell>
               </TableRow>
             )}
             {data?.items.map((log) => (

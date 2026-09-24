@@ -6,6 +6,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { api, type PrintBatchSummary } from "@/lib/api";
+import { WarmEmptyState } from "@/components/motifs/WarmEmptyState";
 
 export function PrintBatchesPage() {
   const navigate = useNavigate();
@@ -38,8 +39,12 @@ export function PrintBatchesPage() {
           <TableBody>
             {!isLoading && !batches?.length && (
               <TableRow>
-                <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
-                  কোনো প্রিন্ট ব্যাচ নেই -- ভোটার তালিকা পেজ থেকে ফিল্টার করে একটা তৈরি করুন
+                <TableCell colSpan={6}>
+                  <WarmEmptyState
+                    icon={Printer}
+                    title="কোনো প্রিন্ট ব্যাচ নেই"
+                    subtitle='ভোটার তালিকা পেজ থেকে ফিল্টার করে "প্রিন্ট ব্যাচ তৈরি করুন" চাপুন'
+                  />
                 </TableCell>
               </TableRow>
             )}

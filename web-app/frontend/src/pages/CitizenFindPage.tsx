@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api, type PublicLookupResult } from "@/lib/api";
+import { StampBadge } from "@/components/motifs/StampBadge";
 
 const HOW_IT_WORKS = [
   { title: "নাম, পিতার নাম ও জন্ম তারিখ দিন", detail: "ভোটার তালিকায় যেভাবে লেখা আছে হুবহু সেভাবে" },
@@ -61,19 +62,17 @@ export function CitizenFindPage() {
   const hasError = lookup.isError || (result && !result.found);
 
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-b from-primary/5 via-background to-background">
+    <div className="paper-texture flex min-h-screen flex-col">
       <div className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 p-4 pt-10 sm:pt-16">
         <div className="flex flex-col items-center gap-2 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
-            <Vote className="h-7 w-7" />
-          </div>
-          <h1 className="text-xl font-semibold">আপনার ভোটার তথ্য যাচাই করুন</h1>
+          <StampBadge icon={Vote} className="-rotate-3" />
+          <h1 className="font-heading text-xl font-semibold">আপনার ভোটার তথ্য যাচাই করুন</h1>
           <p className="text-sm text-muted-foreground">
             নাম, পিতার নাম ও জন্ম তারিখ দিন -- আপনার ভোটার নম্বর ও ভোট কেন্দ্রের তথ্য দেখতে পাবেন
           </p>
         </div>
 
-        <form onSubmit={onSubmit} className="space-y-4 rounded-2xl border bg-card p-5 shadow-sm">
+        <form onSubmit={onSubmit} className="space-y-4 rounded-2xl border border-kraft/30 bg-card p-5 shadow-sm">
           <div className="space-y-1.5">
             <Label htmlFor="name">আপনার নাম</Label>
             <Input
@@ -99,7 +98,7 @@ export function CitizenFindPage() {
             <Label htmlFor="mother_name">মাতার নাম (ঐচ্ছিক -- একাধিক ফলাফল মিললে প্রয়োজন হবে)</Label>
             <Input id="mother_name" className="h-12 text-base" value={motherName} onChange={(e) => setMotherName(e.target.value)} />
           </div>
-          <Button type="submit" className="h-12 w-full text-base" disabled={lookup.isPending}>
+          <Button type="submit" className="stamp-press h-12 w-full text-base" disabled={lookup.isPending}>
             {lookup.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
             খুঁজুন
           </Button>
@@ -131,10 +130,10 @@ export function CitizenFindPage() {
         )}
 
         {result?.found && result.voter && (
-          <div className="space-y-2 rounded-2xl border bg-card p-5 shadow-sm">
-            <div className="flex items-center gap-2 text-primary">
-              <ShieldCheck className="h-5 w-5" />
-              <span className="text-sm font-medium">তথ্য পাওয়া গেছে</span>
+          <div className="space-y-2 rounded-2xl border border-kraft/30 bg-card p-5 shadow-sm">
+            <div className="flex items-center gap-2">
+              <StampBadge icon={ShieldCheck} size="sm" className="bg-stamp" />
+              <span className="text-sm font-medium text-primary">যাচাইকৃত -- তথ্য পাওয়া গেছে</span>
             </div>
             <p className="text-lg font-semibold">{result.voter.name}</p>
             <div className="grid grid-cols-1 gap-2 pt-2 text-sm sm:grid-cols-2">

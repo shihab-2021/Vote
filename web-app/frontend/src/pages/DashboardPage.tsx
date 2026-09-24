@@ -27,7 +27,7 @@ export function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold">ড্যাশবোর্ড</h1>
+        <h1 className="font-heading text-xl font-semibold">ড্যাশবোর্ড</h1>
         <p className="text-sm text-muted-foreground">সামগ্রিক পরিসংখ্যান</p>
       </div>
 

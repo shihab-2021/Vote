@@ -3,14 +3,22 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
 @import "@fontsource-variable/noto-sans-bengali";
+@import "@fontsource/noto-serif-bengali/400.css";
+@import "@fontsource/noto-serif-bengali/700.css";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-    --font-heading: var(--font-sans);
+    /* উষ্ণ, বইয়ের-মতো সেরিফ -- শুধু বড় হেডিং-এ ব্যবহারের জন্য (নস্টালজিক অনুভূতি), বডি টেক্সট/টেবিল
+       এখনো --font-sans-ই ব্যবহার করে (পড়ার সুবিধা/ঘনত্বের জন্য) */
+    --font-heading: 'Noto Serif Bengali', Georgia, 'Times New Roman', serif;
     /* Geist দিয়ে ইংরেজি/ল্যাটিন হরফ, Noto Sans Bengali দিয়ে বাংলা -- Geist-এ বাংলা গ্লিফ নেই,
        তাই এটা ছাড়া বাংলা টেক্সট ব্রাউজারের ডিফল্ট ফন্টে fallback করত */
     --font-sans: 'Geist Variable', 'Noto Sans Bengali Variable', sans-serif;
+    --color-paper: var(--paper);
+    --color-ink: var(--ink);
+    --color-stamp: var(--stamp);
+    --color-kraft: var(--kraft);
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -55,7 +63,9 @@
    সাদা/হালকা background। কম্পোনেন্টগুলো (button/badge/input ইত্যাদি) সব এই টোকেন থেকেই রঙ নেয়,
    তাই এখানে বদলালে পুরো অ্যাপ স্বয়ংক্রিয়ভাবে নতুন পরিচয় পায় -- কোনো কম্পোনেন্ট-লেভেল কোড বদলাতে হয় না। */
 :root {
-    --background: oklch(1 0 0);
+    /* সাদা না রেখে সামান্য উষ্ণ কাগজের টোন -- পুরো অ্যাপে (অ্যাডমিন সহ) হালকা নস্টালজিক অনুভূতি
+       দেয়, কিন্তু card/table এখনো আলাদা হালকা রঙে (নিচে) থাকায় ডেটা পড়তে কোনো সমস্যা হয় না */
+    --background: oklch(0.985 0.008 70);
     --foreground: oklch(0.16 0.01 155);
     --card: oklch(1 0 0);
     --card-foreground: oklch(0.16 0.01 155);
@@ -79,18 +89,28 @@
     --chart-4: oklch(0.55 0.12 220);
     --chart-5: oklch(0.6 0.1 195);
     --radius: 0.75rem;
-    --sidebar: oklch(0.985 0.006 155);
-    --sidebar-foreground: oklch(0.16 0.01 155);
+    /* সাইডবার এখনো হালকা (আগের সিদ্ধান্ত অনুযায়ী), কিন্তু ঠান্ডা সবুজ-155 hue-এর বদলে উষ্ণ
+       kraft/paper hue-এ (~70) সরানো হলো -- যাতে সাইডবার আর মূল কন্টেন্ট একই "কাগজের জগতের"
+       মনে হয়, আলাদা ঠান্ডা মিন্ট প্যানেলের মতো না */
+    --sidebar: oklch(0.965 0.014 72);
+    --sidebar-foreground: oklch(0.24 0.025 50);
     --sidebar-primary: oklch(0.4 0.1 155);
     --sidebar-primary-foreground: oklch(0.99 0.005 155);
-    --sidebar-accent: oklch(0.94 0.03 155);
-    --sidebar-accent-foreground: oklch(0.3 0.06 155);
-    --sidebar-border: oklch(0.91 0.01 155);
-    --sidebar-ring: oklch(0.65 0.1 155);
+    --sidebar-accent: oklch(0.92 0.035 70);
+    --sidebar-accent-foreground: oklch(0.32 0.06 45);
+    --sidebar-border: oklch(0.87 0.02 70);
+    --sidebar-ring: oklch(0.62 0.07 55);
+
+    /* নস্টালজিক/উষ্ণ অ্যাকসেন্ট টোকেন -- মূল সবুজ/লাল ব্র্যান্ড পরিচয় প্রতিস্থাপন না করে পাশাপাশি
+       যোগ করা হলো: পুরনো কাগজ/স্ট্যাম্প/খাম-এর অনুভূতি আনতে সামান্য ব্যবহারের জন্য */
+    --paper: oklch(0.97 0.014 75);
+    --ink: oklch(0.28 0.03 50);
+    --stamp: oklch(0.5 0.14 40);
+    --kraft: oklch(0.78 0.045 70);
 }
 
 .dark {
-    --background: oklch(0.17 0.012 155);
+    --background: oklch(0.17 0.014 60);
     --foreground: oklch(0.97 0.005 155);
     --card: oklch(0.22 0.015 155);
     --card-foreground: oklch(0.97 0.005 155);
@@ -113,14 +133,19 @@
     --chart-3: oklch(0.7 0.14 75);
     --chart-4: oklch(0.65 0.12 220);
     --chart-5: oklch(0.68 0.1 195);
-    --sidebar: oklch(0.2 0.015 155);
-    --sidebar-foreground: oklch(0.97 0.005 155);
+    --sidebar: oklch(0.2 0.02 60);
+    --sidebar-foreground: oklch(0.94 0.015 70);
     --sidebar-primary: oklch(0.68 0.13 155);
     --sidebar-primary-foreground: oklch(0.16 0.02 155);
-    --sidebar-accent: oklch(0.32 0.04 155);
-    --sidebar-accent-foreground: oklch(0.95 0.01 155);
+    --sidebar-accent: oklch(0.3 0.035 60);
+    --sidebar-accent-foreground: oklch(0.92 0.02 65);
     --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.6 0.11 155);
+    --sidebar-ring: oklch(0.62 0.09 60);
+
+    --paper: oklch(0.24 0.02 60);
+    --ink: oklch(0.92 0.015 70);
+    --stamp: oklch(0.62 0.15 40);
+    --kraft: oklch(0.4 0.03 65);
 }
 
 @layer base {
@@ -154,6 +179,38 @@
     clip: rect(0, 0, 0, 0);
     white-space: nowrap;
     border: 0;
+  }
+
+  /* পুরনো কাগজের মৃদু দানাদার টেক্সচার (SVG fractal noise, কোনো ইমেজ ফাইল/লাইসেন্স ছাড়াই) --
+     পাবলিক পেজের (Landing/Login/CitizenFind) হিরো/কার্ডে ব্যবহারের জন্য, খুবই হালকা opacity-তে
+     যাতে টেক্সট পড়তে কোনো সমস্যা না হয় */
+  .paper-texture {
+    background-color: var(--paper);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
+  }
+
+  /* .paper-texture-এর মতোই দানা, কিন্তু নিজের background-color চাপায় না -- যেখানে ইতিমধ্যে
+     একটা রঙিন পৃষ্ঠতল (যেমন সাইডবার) আছে তার উপর শুধু টেক্সচার বসানোর জন্য */
+  .grain-overlay {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
+  }
+
+  /* প্রাইমারি CTA বাটনে চাপ দিলে রাবার-স্ট্যাম্প বসানোর মতো একটা স্পর্শযোগ্য অনুভূতি */
+  .stamp-press {
+    transition: transform 150ms ease, opacity 150ms ease;
+  }
+  .stamp-press:active {
+    transform: scale(0.96);
+    opacity: 0.88;
+  }
+
+  /* হালকাভাবে কার্ড তুলে ধরার অনুভূতি -- যেন কেউ একটা পুরনো ছবি/কাগজ হাতে তুলে নিচ্ছে */
+  .card-lift {
+    transition: transform 200ms ease, box-shadow 200ms ease;
+  }
+  .card-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px -8px oklch(0.3 0.05 50 / 25%);
   }
 }
 
