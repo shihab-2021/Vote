@@ -51,40 +51,42 @@ export function PrintBatchDetailPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" aria-label="ব্যাক" onClick={() => navigate("/print")}>
+    <div className="space-y-5">
+      <div className="flex items-start gap-2">
+        <Button variant="ghost" size="icon" aria-label="ব্যাক" className="mt-0.5" onClick={() => navigate("/print")}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <div>
-          <h1 className="text-xl font-semibold">{batch.label}</h1>
-          <p className="text-sm text-muted-foreground">
-            {new Date(batch.created_at).toLocaleString("bn-BD")}
+        <div className="min-w-0 flex-1">
+          <div className="text-[10.5px] font-semibold tracking-widest text-muted-foreground uppercase">ব্যাচ বিস্তারিত</div>
+          <h1 className="font-heading truncate text-xl font-bold">{batch.label}</h1>
+          <p className="text-xs text-muted-foreground">
+            {new Date(batch.created_at).toLocaleString("bn-BD")} · ব্যাচ #{String(batch.id).padStart(2, "0")}
           </p>
         </div>
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        <div className="rounded-xl border bg-card p-4 text-center shadow-sm">
-          <div className="text-2xl font-semibold">{batch.voter_count}</div>
+        <div className="rounded border border-kraft bg-card p-4 text-center">
+          <div className="font-heading text-2xl font-bold">{batch.voter_count.toLocaleString("bn-BD")}</div>
           <div className="text-xs text-muted-foreground">মোট ভোটার</div>
         </div>
-        <div className="rounded-xl border bg-card p-4 text-center shadow-sm">
-          <div className="text-2xl font-semibold">{batch.printed_count}</div>
+        <div className="rounded border border-kraft bg-card p-4 text-center">
+          <div className="font-heading text-2xl font-bold">{batch.printed_count.toLocaleString("bn-BD")}</div>
           <div className="text-xs text-muted-foreground">প্রিন্ট হয়েছে</div>
         </div>
-        <div className="rounded-xl border bg-card p-4 text-center shadow-sm">
-          <div className="text-2xl font-semibold">{batch.distributed_count}</div>
+        <div className="rounded border border-kraft bg-card p-4 text-center">
+          <div className="font-heading text-2xl font-bold text-primary">{batch.distributed_count.toLocaleString("bn-BD")}</div>
           <div className="text-xs text-muted-foreground">বিতরণ হয়েছে</div>
         </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Button onClick={() => window.open(`/api/print-batches/${id}/pdf`, "_blank")}>
+        <Button className="stamp-press" onClick={() => window.open(`/api/print-batches/${id}/pdf`, "_blank")}>
           <Download className="h-4 w-4" /> PDF ডাউনলোড করুন
         </Button>
         <Button
           variant="outline"
+          className="rounded-full border-dashed border-kraft"
           onClick={() => distributeAll.mutate()}
           disabled={distributeAll.isPending || batch.distributed_count === batch.voter_count}
         >
@@ -93,7 +95,7 @@ export function PrintBatchDetailPage() {
         </Button>
       </div>
 
-      <div className="overflow-auto rounded-lg border">
+      <div className="overflow-auto rounded border border-kraft">
         <Table>
           <TableHeader>
             <TableRow>
@@ -108,7 +110,7 @@ export function PrintBatchDetailPage() {
             {batch.items.map((item) => (
               <TableRow key={item.id}>
                 <TableCell className="font-medium">{item.name}</TableCell>
-                <TableCell className="text-xs">{item.voter_no || "—"}</TableCell>
+                <TableCell className="text-xs tabular-nums">{item.voter_no || "—"}</TableCell>
                 <TableCell className="max-w-64 truncate text-xs text-muted-foreground">
                   {item.address || "—"}
                 </TableCell>

@@ -3,9 +3,9 @@ interface DonutChartProps {
   data: Record<string, number>;
 }
 
-// এই চার্টের জন্যই নির্দিষ্ট রঙ -- বাকি UI-এর সংযত সবুজ+লাল থেকে আলাদা রাখা হয়েছে, যাতে একাধিক
-// ক্যাটেগরি (পুরুষ/মহিলা/...) স্পষ্টভাবে আলাদা করা যায় আর "লাল" ভুল করে বিপদ/ফ্ল্যাগ বোঝাচ্ছে মনে না হয়
-const DONUT_COLORS = ["#2563eb", "#db2777", "#16a34a", "#f59e0b", "#7c3aed"];
+// প্রথম দুটো রঙ প্রাইমারি সবুজ + স্ট্যাম্প লাল (সাধারণত পুরুষ/মহিলা), বাকিগুলো অতিরিক্ত
+// ক্যাটেগরির জন্য fallback -- পুরো অ্যাপের নতুন উষ্ণ প্যালেটের সাথে সামঞ্জস্যপূর্ণ
+const DONUT_COLORS = ["#1F5B3E", "#A6402E", "#B79362", "#4A6FA5", "#8A6B3F"];
 
 function polarPoint(cx: number, cy: number, radius: number, angle: number) {
   return { x: cx + radius * Math.sin(angle), y: cy - radius * Math.cos(angle) };
@@ -17,8 +17,8 @@ export function DonutChart({ title, data }: DonutChartProps) {
 
   if (!total) {
     return (
-      <div className="rounded-xl border bg-card p-4 shadow-sm">
-        <h3 className="mb-3 text-sm font-medium">{title}</h3>
+      <div className="rounded border border-kraft bg-card p-5">
+        <h3 className="font-heading mb-3 text-base font-bold">{title}</h3>
         <p className="py-8 text-center text-sm text-muted-foreground">কোনো ডেটা নেই</p>
       </div>
     );
@@ -42,24 +42,28 @@ export function DonutChart({ title, data }: DonutChartProps) {
   });
 
   return (
-    <div className="rounded-xl border bg-card p-4 shadow-sm">
-      <h3 className="mb-3 text-sm font-medium">{title}</h3>
+    <div className="rounded border border-kraft bg-card p-5">
+      <h3 className="font-heading mb-4 text-base font-bold">{title}</h3>
       <div className="flex flex-col items-center gap-5 sm:flex-row sm:justify-center">
-        <svg width="180" height="180" viewBox="0 0 180 180" className="shrink-0">
-          {arcs.map((a) => (
-            <path key={a.label} d={a.d} fill={a.color} />
-          ))}
-          <text x={cx} y={cy - 3} textAnchor="middle" className="fill-foreground text-lg font-bold">
-            {total.toLocaleString("bn-BD")}
-          </text>
-          <text x={cx} y={cy + 15} textAnchor="middle" className="fill-muted-foreground text-[11px]">
-            মোট
-          </text>
-        </svg>
+        {/* সিল-ফ্রেম -- ড্যাশড রিং, একটা পুরনো মোহর/ওয়াক্স-সিলের অনুভূতি */}
+        <div className="relative flex h-[196px] w-[196px] shrink-0 items-center justify-center">
+          <div className="absolute inset-0 rounded-full border-[1.5px] border-dashed border-kraft" />
+          <svg width="180" height="180" viewBox="0 0 180 180">
+            {arcs.map((a) => (
+              <path key={a.label} d={a.d} fill={a.color} />
+            ))}
+            <text x={cx} y={cy - 3} textAnchor="middle" className="font-heading fill-foreground text-lg font-bold">
+              {total.toLocaleString("bn-BD")}
+            </text>
+            <text x={cx} y={cy + 15} textAnchor="middle" className="fill-muted-foreground text-[11px]">
+              মোট
+            </text>
+          </svg>
+        </div>
         <div className="flex flex-col gap-2">
           {arcs.map((a) => (
             <div key={a.label} className="flex items-center gap-2 text-sm">
-              <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ backgroundColor: a.color }} />
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: a.color }} />
               <span className="text-secondary-foreground">{a.label}</span>
               <span className="tabular-nums text-muted-foreground">
                 {a.value.toLocaleString("bn-BD")} ({a.pct.toFixed(0)}%)

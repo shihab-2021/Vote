@@ -27,6 +27,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EditableCell } from "@/components/EditableCell";
 import { RecordDrawer } from "@/components/RecordDrawer";
 import { WarmEmptyState } from "@/components/motifs/WarmEmptyState";
+import { Masthead } from "@/components/motifs/Masthead";
 import { cn } from "@/lib/utils";
 import {
   api, VOTER_LABELS, type Voter, type VoterListResponse, type StatsSummary, type FieldDef,
@@ -433,31 +434,32 @@ export function VotersPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <h1 className="text-xl font-semibold">ভোটার তালিকা</h1>
-          <p className="text-sm text-muted-foreground">
-            {data ? `মোট ${data.total.toLocaleString("bn-BD")} জন` : "লোড হচ্ছে..."}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {user?.permissions.includes("generate_voter_card") && (
-            <Button variant="outline" size="sm" onClick={createPrintBatch} disabled={creatingBatch}>
-              {creatingBatch ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
-              <span className="hidden sm:inline">প্রিন্ট ব্যাচ তৈরি করুন</span>
-            </Button>
-          )}
-          <DropdownMenu>
-            <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}>
-              <Download className="h-4 w-4" /> <span className="hidden sm:inline">এক্সপোর্ট</span>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => exportData("xlsx")}>Excel (.xlsx)</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => exportData("csv")}>CSV</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
+      <Masthead
+        eyebrow="নিবন্ধন খতিয়ান"
+        title="ভোটার তালিকা"
+        subtitle={data ? `মোট ${data.total.toLocaleString("bn-BD")} জন নিবন্ধিত` : "লোড হচ্ছে..."}
+        actions={
+          <>
+            {user?.permissions.includes("generate_voter_card") && (
+              <Button variant="outline" size="sm" className="rounded-full border-dashed border-kraft" onClick={createPrintBatch} disabled={creatingBatch}>
+                {creatingBatch ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
+                <span className="hidden sm:inline">প্রিন্ট ব্যাচ তৈরি করুন</span>
+              </Button>
+            )}
+            {user?.permissions.includes("export_voter") && (
+              <DropdownMenu>
+                <DropdownMenuTrigger render={<Button size="sm" className="stamp-press rounded-full" />}>
+                  <Download className="h-4 w-4" /> <span className="hidden sm:inline">এক্সপোর্ট</span>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => exportData("xlsx")}>Excel (.xlsx)</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => exportData("csv")}>CSV</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </>
+        }
+      />
 
       {/* মোবাইল -- সবসময় দৃশ্যমান সার্চ + একটা "ফিল্টার" বাটনে বাকি সব (বটম শিট) */}
       <div className="flex items-center gap-2 md:hidden">
@@ -505,15 +507,17 @@ export function VotersPage() {
         </SheetContent>
       </Sheet>
 
-      {/* ডেস্কটপ -- সব ফিল্টার সরাসরি দৃশ্যমান (আগের মতোই) */}
-      <div className="hidden flex-wrap items-center gap-3 md:flex">
-        {renderSearchField()}
-        {renderWardAndFlagged()}
-        {isFetching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-      </div>
-      <div className="hidden flex-wrap items-start gap-3 md:flex">
-        {renderAddressField()}
-        {renderFindByBuilder()}
+      {/* ডেস্কটপ -- সব ফিল্টার সরাসরি দৃশ্যমান (আগের মতোই), কাফট-বর্ডার কার্ডে */}
+      <div className="hidden flex-col gap-3 rounded border border-kraft bg-card p-4 md:flex">
+        <div className="flex flex-wrap items-center gap-3">
+          {renderSearchField()}
+          {renderWardAndFlagged()}
+          {isFetching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+        </div>
+        <div className="flex flex-wrap items-start gap-3">
+          {renderAddressField()}
+          {renderFindByBuilder()}
+        </div>
       </div>
 
       {/* সক্রিয় ফিল্টার চিপ -- সব ব্রেকপয়েন্টেই দৃশ্যমান */}
@@ -552,10 +556,11 @@ export function VotersPage() {
               <Skeleton key={i} className="h-24 w-full rounded-xl" />
             ))}
           </div>
-          <div className="hidden overflow-auto rounded-lg border md:block">
+          <div className="hidden overflow-auto rounded border border-kraft md:block">
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">#</TableHead>
                   {EDIT_COLS.map((c) => (
                     <TableHead key={c.key as string}>{c.label}</TableHead>
                   ))}
@@ -565,6 +570,7 @@ export function VotersPage() {
               <TableBody>
                 {Array.from({ length: 8 }).map((_, i) => (
                   <TableRow key={i}>
+                    <TableCell />
                     {EDIT_COLS.map((c) => (
                       <TableCell key={c.key as string}>
                         <Skeleton className="h-4 w-full" />
@@ -595,20 +601,27 @@ export function VotersPage() {
         </WarmEmptyState>
       )}
 
-      {/* মোবাইল -- কার্ড লিস্ট; ট্যাপ করলে RecordDrawer-এ পূর্ণ বিস্তারিত/এডিট */}
+      {/* মোবাইল -- ইনডেক্স-কার্ড স্টাইল লিস্ট (কুইক সার্চের মতোই); ট্যাপ করলে RecordDrawer-এ
+          পূর্ণ বিস্তারিত/এডিট */}
       {!isLoading && !!data?.items.length && (
-        <div className="space-y-2 md:hidden">
+        <div className="space-y-2.5 md:hidden">
           {data.items.map((voter) => (
             <button
               key={voter.id}
               onClick={() => setDetailVoter(voter)}
               className={cn(
-                "flex w-full flex-col gap-1.5 rounded-xl border bg-card p-3.5 text-left shadow-sm active:bg-muted/40",
-                voter.is_flagged && "border-destructive/30 bg-destructive/5"
+                "relative flex w-full flex-col gap-1.5 rounded border bg-card p-3.5 pt-4 text-left shadow-sm active:bg-muted/40",
+                voter.is_flagged ? "border-destructive/40 bg-destructive/5" : "border-kraft"
               )}
             >
+              <span
+                className={cn(
+                  "absolute top-0 right-4 h-3.5 w-7 rounded-b border-x border-b",
+                  voter.is_flagged ? "border-destructive/40 bg-destructive/10" : "border-kraft bg-secondary"
+                )}
+              />
               <div className="flex items-start justify-between gap-2">
-                <span className="font-medium leading-tight">{voter.name || "নাম নেই"}</span>
+                <span className="font-heading font-bold leading-tight">{voter.name || "নাম নেই"}</span>
                 {voter.is_flagged && (
                   <Badge variant="destructive" className="shrink-0 text-[10px] font-normal">
                     যাচাই প্রয়োজন
@@ -619,8 +632,8 @@ export function VotersPage() {
                 <MapPin className="mt-0.5 h-3 w-3 shrink-0" />
                 <span className="line-clamp-2">{voter.address || "ঠিকানা নেই"}</span>
               </div>
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-0.5 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-dotted border-kraft pt-1.5 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1 tabular-nums">
                   <IdCard className="h-3 w-3" /> {voter.voter_no || "—"}
                 </span>
                 {voter.ward && <span>ওয়ার্ড {voter.ward}</span>}
@@ -631,12 +644,14 @@ export function VotersPage() {
         </div>
       )}
 
-      {/* ডেস্কটপ -- বিদ্যমান ইনলাইন-এডিটেবল টেবিল, অপরিবর্তিত */}
+      {/* ডেস্কটপ -- বিদ্যমান ইনলাইন-এডিটেবল টেবিল, এখন লেজার-স্টাইল (ক্রমিক মার্জিন, ফ্ল্যাগড সারিতে
+          বাম অ্যাকসেন্ট বার) -- সর্ট/ফিল্টার/ইনলাইন-এডিট লজিক অপরিবর্তিত */}
       {!isLoading && !!data?.items.length && (
-        <div className="hidden overflow-auto rounded-lg border md:block">
+        <div className="hidden overflow-auto rounded border border-kraft md:block">
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">#</TableHead>
                 {EDIT_COLS.map((c) => (
                   <TableHead key={c.key as string}>{c.label}</TableHead>
                 ))}
@@ -644,8 +659,14 @@ export function VotersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.items.map((voter) => (
-                <TableRow key={voter.id} className={voter.is_flagged ? "bg-destructive/5" : ""}>
+              {data.items.map((voter, idx) => (
+                <TableRow
+                  key={voter.id}
+                  className={cn(voter.is_flagged && "border-l-[3px] border-l-destructive bg-destructive/5")}
+                >
+                  <TableCell className="text-xs tabular-nums text-kraft">
+                    {((page - 1) * pageSize + idx + 1).toLocaleString("bn-BD")}
+                  </TableCell>
                   {EDIT_COLS.map((c) => (
                     <TableCell key={c.key as string} className="p-1">
                       <EditableCell

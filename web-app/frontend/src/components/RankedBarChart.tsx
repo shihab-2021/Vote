@@ -6,7 +6,7 @@ interface RankedBarChartProps {
   limit?: number;
 }
 
-const HUE_LIGHT = "#2a78d6";
+const HUE_LIGHT = "#1F5B3E";
 
 export function RankedBarChart({ title, data, limit = 8 }: RankedBarChartProps) {
   const [hovered, setHovered] = useState<string | null>(null);
@@ -17,17 +17,17 @@ export function RankedBarChart({ title, data, limit = 8 }: RankedBarChartProps) 
 
   if (!entries.length) {
     return (
-      <div className="rounded-xl border bg-card p-4 shadow-sm">
-        <h3 className="mb-3 text-sm font-medium">{title}</h3>
+      <div className="rounded border border-kraft bg-card p-5">
+        <h3 className="font-heading mb-3 text-base font-bold">{title}</h3>
         <p className="py-8 text-center text-sm text-muted-foreground">কোনো ডেটা নেই</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border bg-card p-4 shadow-sm">
-      <h3 className="mb-3 text-sm font-medium">{title}</h3>
-      <div className="space-y-2.5">
+    <div className="rounded border border-kraft bg-card p-5">
+      <h3 className="font-heading mb-4 text-base font-bold">{title}</h3>
+      <div className="space-y-3.5">
         {entries.map(([label, value]) => {
           const pct = (value / max) * 100;
           const isHovered = hovered === label;
@@ -38,18 +38,19 @@ export function RankedBarChart({ title, data, limit = 8 }: RankedBarChartProps) 
               onMouseEnter={() => setHovered(label)}
               onMouseLeave={() => setHovered(null)}
             >
-              <div className="mb-0.5 flex items-baseline justify-between text-xs">
-                <span className="text-secondary-foreground">{label}</span>
+              <div className="mb-1 flex items-baseline gap-2 text-sm">
+                <span className="whitespace-nowrap text-foreground/80">{label}</span>
+                <span className="-translate-y-1 flex-1 border-b border-dotted border-kraft" />
                 <span
-                  className="tabular-nums text-muted-foreground transition-colors"
+                  className="font-heading text-base font-bold tabular-nums transition-colors"
                   style={{ color: isHovered ? HUE_LIGHT : undefined }}
                 >
                   {value.toLocaleString("bn-BD")}
                 </span>
               </div>
-              <div className="h-2.5 w-full rounded-full bg-muted">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
                 <div
-                  className="h-2.5 rounded-full transition-all"
+                  className="h-full rounded-full transition-all"
                   style={{
                     width: `${pct}%`,
                     backgroundColor: HUE_LIGHT,

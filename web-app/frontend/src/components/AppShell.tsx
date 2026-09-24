@@ -125,7 +125,7 @@ export function AppShell() {
         </div>
       </Sidebar>
 
-      <SidebarInset>
+      <SidebarInset className="min-w-0">
         {/* মোবাইল -- কম্প্যাক্ট টপ বার (ব্র্যান্ড + প্রোফাইল), নেভিগেশন নিচের ট্যাব-বারে */}
         <header className="grain-overlay relative flex h-14 shrink-0 items-center justify-between gap-2 border-b border-kraft/25 bg-card px-4 md:hidden">
           <div className="flex items-center gap-2">
@@ -149,7 +149,7 @@ export function AppShell() {
           <SidebarTrigger />
         </header>
 
-        <main id="main-content" tabIndex={-1} className="paper-texture flex-1 overflow-auto p-4 pb-24 md:p-6 md:pb-6">
+        <main id="main-content" tabIndex={-1} className="paper-texture min-w-0 flex-1 overflow-auto p-4 pb-24 md:p-6 md:pb-6">
           <Outlet />
         </main>
 

@@ -63,89 +63,89 @@
    সাদা/হালকা background। কম্পোনেন্টগুলো (button/badge/input ইত্যাদি) সব এই টোকেন থেকেই রঙ নেয়,
    তাই এখানে বদলালে পুরো অ্যাপ স্বয়ংক্রিয়ভাবে নতুন পরিচয় পায় -- কোনো কম্পোনেন্ট-লেভেল কোড বদলাতে হয় না। */
 :root {
-    /* সাদা না রেখে সামান্য উষ্ণ কাগজের টোন -- পুরো অ্যাপে (অ্যাডমিন সহ) হালকা নস্টালজিক অনুভূতি
-       দেয়, কিন্তু card/table এখনো আলাদা হালকা রঙে (নিচে) থাকায় ডেটা পড়তে কোনো সমস্যা হয় না */
-    --background: oklch(0.985 0.008 70);
-    --foreground: oklch(0.16 0.01 155);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.16 0.01 155);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.16 0.01 155);
-    --primary: oklch(0.4 0.1 155);
-    --primary-foreground: oklch(0.99 0.005 155);
-    --secondary: oklch(0.97 0.008 155);
-    --secondary-foreground: oklch(0.28 0.03 155);
-    --muted: oklch(0.97 0.008 155);
-    --muted-foreground: oklch(0.5 0.015 155);
-    --accent: oklch(0.94 0.03 155);
-    --accent-foreground: oklch(0.3 0.06 155);
-    --destructive: oklch(0.57 0.22 25);
-    --border: oklch(0.91 0.01 155);
-    --input: oklch(0.91 0.01 155);
-    --ring: oklch(0.65 0.1 155);
-    --chart-1: oklch(0.4 0.1 155);
-    --chart-2: oklch(0.57 0.22 25);
-    --chart-3: oklch(0.65 0.14 75);
-    --chart-4: oklch(0.55 0.12 220);
-    --chart-5: oklch(0.6 0.1 195);
+    /* অনুমোদিত মকআপের হুবহু প্যালেট -- "ভোটার রেজিস্ট্রি গেজেট/খতিয়ান" পরিচয়: উষ্ণ ক্রিম পটভূমি,
+       গাঢ় সবুজ, ইটের-লাল স্ট্যাম্প, কাফট-বাদামী বর্ডার। hex সরাসরি মকআপ থেকে নেওয়া, যাতে
+       কোনো টোকেন-নির্ভর কম্পোনেন্ট (Card/Table/Button ইত্যাদি) স্বয়ংক্রিয়ভাবে হুবহু মিলে যায়। */
+    --background: #F4E9D8;
+    --foreground: #2E2015;
+    --card: #FFFDF7;
+    --card-foreground: #2E2015;
+    --popover: #FFFDF7;
+    --popover-foreground: #2E2015;
+    --primary: #1F5B3E;
+    --primary-foreground: #FBF6EA;
+    --secondary: #EDE1C8;
+    --secondary-foreground: #4A3A22;
+    --muted: #EDE1C8;
+    --muted-foreground: #6B5738;
+    --accent: #E3CE9E;
+    --accent-foreground: #2E2015;
+    --destructive: #A6402E;
+    --border: #C9AE7E;
+    --input: #C9AE7E;
+    --ring: #1F5B3E;
+    --chart-1: #1F5B3E;
+    --chart-2: #A6402E;
+    --chart-3: #B79362;
+    --chart-4: #4A6FA5;
+    --chart-5: #6B8F71;
     --radius: 0.75rem;
-    /* সাইডবার এখনো হালকা (আগের সিদ্ধান্ত অনুযায়ী), কিন্তু ঠান্ডা সবুজ-155 hue-এর বদলে উষ্ণ
-       kraft/paper hue-এ (~70) সরানো হলো -- যাতে সাইডবার আর মূল কন্টেন্ট একই "কাগজের জগতের"
-       মনে হয়, আলাদা ঠান্ডা মিন্ট প্যানেলের মতো না */
-    --sidebar: oklch(0.965 0.014 72);
-    --sidebar-foreground: oklch(0.24 0.025 50);
-    --sidebar-primary: oklch(0.4 0.1 155);
-    --sidebar-primary-foreground: oklch(0.99 0.005 155);
-    --sidebar-accent: oklch(0.92 0.035 70);
-    --sidebar-accent-foreground: oklch(0.32 0.06 45);
-    --sidebar-border: oklch(0.87 0.02 70);
-    --sidebar-ring: oklch(0.62 0.07 55);
+    /* সাইডবার এখনো হালকা (আগের সিদ্ধান্ত অনুযায়ী), মূল কন্টেন্টের চেয়ে সামান্য গাঢ় কাফট টোনে --
+       যাতে দুটো প্যানেল একই "কাগজের জগতের" মনে হয় কিন্তু আলাদা স্তর হিসেবে বোঝা যায় */
+    --sidebar: #EDDFC4;
+    --sidebar-foreground: #2E2015;
+    --sidebar-primary: #1F5B3E;
+    --sidebar-primary-foreground: #FBF6EA;
+    --sidebar-accent: #E3CE9E;
+    --sidebar-accent-foreground: #2E2015;
+    --sidebar-border: #C9AE7E;
+    --sidebar-ring: #1F5B3E;
 
-    /* নস্টালজিক/উষ্ণ অ্যাকসেন্ট টোকেন -- মূল সবুজ/লাল ব্র্যান্ড পরিচয় প্রতিস্থাপন না করে পাশাপাশি
-       যোগ করা হলো: পুরনো কাগজ/স্ট্যাম্প/খাম-এর অনুভূতি আনতে সামান্য ব্যবহারের জন্য */
-    --paper: oklch(0.97 0.014 75);
-    --ink: oklch(0.28 0.03 50);
-    --stamp: oklch(0.5 0.14 40);
-    --kraft: oklch(0.78 0.045 70);
+    /* নস্টালজিক/উষ্ণ অ্যাকসেন্ট টোকেন -- মূল টোকেনের সাথেই এখন একই প্যালেট, আলাদা সিমান্টিক নামে
+       (কম্পোনেন্ট কোডে border-kraft/bg-stamp ইত্যাদি ব্যবহারের সুবিধার জন্য) */
+    --paper: #F4E9D8;
+    --ink: #2E2015;
+    --stamp: #A6402E;
+    --kraft: #C9AE7E;
 }
 
 .dark {
-    --background: oklch(0.17 0.014 60);
-    --foreground: oklch(0.97 0.005 155);
-    --card: oklch(0.22 0.015 155);
-    --card-foreground: oklch(0.97 0.005 155);
-    --popover: oklch(0.22 0.015 155);
-    --popover-foreground: oklch(0.97 0.005 155);
-    --primary: oklch(0.68 0.13 155);
-    --primary-foreground: oklch(0.16 0.02 155);
-    --secondary: oklch(0.28 0.018 155);
-    --secondary-foreground: oklch(0.97 0.005 155);
-    --muted: oklch(0.28 0.018 155);
-    --muted-foreground: oklch(0.72 0.015 155);
-    --accent: oklch(0.32 0.04 155);
-    --accent-foreground: oklch(0.95 0.01 155);
-    --destructive: oklch(0.65 0.2 25);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.6 0.11 155);
-    --chart-1: oklch(0.68 0.13 155);
-    --chart-2: oklch(0.65 0.2 25);
-    --chart-3: oklch(0.7 0.14 75);
-    --chart-4: oklch(0.65 0.12 220);
-    --chart-5: oklch(0.68 0.1 195);
-    --sidebar: oklch(0.2 0.02 60);
-    --sidebar-foreground: oklch(0.94 0.015 70);
-    --sidebar-primary: oklch(0.68 0.13 155);
-    --sidebar-primary-foreground: oklch(0.16 0.02 155);
-    --sidebar-accent: oklch(0.3 0.035 60);
-    --sidebar-accent-foreground: oklch(0.92 0.02 65);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.62 0.09 60);
+    --background: #241C13;
+    --foreground: #F4E9D8;
+    --card: #2E2318;
+    --card-foreground: #F4E9D8;
+    --popover: #2E2318;
+    --popover-foreground: #F4E9D8;
+    --primary: #3E8A63;
+    --primary-foreground: #12261C;
+    --secondary: #3A2E1E;
+    --secondary-foreground: #F4E9D8;
+    --muted: #3A2E1E;
+    --muted-foreground: #C9AE7E;
+    --accent: #4A3A22;
+    --accent-foreground: #F4E9D8;
+    --destructive: #D9694F;
+    --border: oklch(1 0 0 / 12%);
+    --input: oklch(1 0 0 / 16%);
+    --ring: #3E8A63;
+    --chart-1: #3E8A63;
+    --chart-2: #D9694F;
+    --chart-3: #C9AE7E;
+    --chart-4: #6E96C9;
+    --chart-5: #8FB596;
+    --sidebar: #1D1610;
+    --sidebar-foreground: #F4E9D8;
+    --sidebar-primary: #3E8A63;
+    --sidebar-primary-foreground: #12261C;
+    --sidebar-accent: #3A2E1E;
+    --sidebar-accent-foreground: #F4E9D8;
+    --sidebar-border: oklch(1 0 0 / 12%);
+    --sidebar-ring: #3E8A63;
 
-    --paper: oklch(0.24 0.02 60);
-    --ink: oklch(0.92 0.015 70);
-    --stamp: oklch(0.62 0.15 40);
-    --kraft: oklch(0.4 0.03 65);
+    --paper: #241C13;
+    --ink: #F4E9D8;
+    --stamp: #D9694F;
+    --kraft: #6B5738;
 }
 
 @layer base {
