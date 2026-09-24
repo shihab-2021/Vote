@@ -8,8 +8,10 @@ from sqlalchemy import select
 from .auth import hash_password
 from .config import settings
 from .db import SessionLocal
-from .models import User
-from .routers import auth, convert, export, fields, imports, stats, voters
+from .models import Role, User
+from .routers import (
+    activity_logs, auth, convert, export, fields, imports, print_batches, public, stats, users, voters,
+)
 
 app = FastAPI(title="ভোটার তালিকা অ্যাপ (হোস্টেড)")
 
@@ -20,6 +22,11 @@ app.include_router(imports.router)
 app.include_router(export.router)
 app.include_router(stats.router)
 app.include_router(convert.router)
+app.include_router(users.router)
+app.include_router(users.roles_router)
+app.include_router(print_batches.router)
+app.include_router(public.router)
+app.include_router(activity_logs.router)
 
 
 @app.get("/api/health")
@@ -33,10 +40,13 @@ def bootstrap_admin():
     try:
         has_user = db.scalar(select(User).limit(1))
         if not has_user:
+            super_admin_role = db.scalar(select(Role).where(Role.key == "super_admin"))
+            if not super_admin_role:
+                return  # মাইগ্রেশন এখনো চলেনি -- আগে `alembic upgrade head` চালাতে হবে
             admin = User(
                 username=settings.admin_bootstrap_username,
                 password_hash=hash_password(settings.admin_bootstrap_password),
-                role="admin",
+                role_id=super_admin_role.id,
             )
             db.add(admin)
             db.commit()

@@ -10,15 +10,56 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .db import Base
 
 
+class Role(Base):
+    __tablename__ = "roles"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    key: Mapped[str] = mapped_column(String(32), unique=True, nullable=False)
+    label: Mapped[str] = mapped_column(String(64), nullable=False)
+
+    permissions: Mapped[list["Permission"]] = relationship(secondary="role_permissions")
+
+
+class Permission(Base):
+    __tablename__ = "permissions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    key: Mapped[str] = mapped_column(String(32), unique=True, nullable=False)
+    label: Mapped[str] = mapped_column(String(64), nullable=False)
+
+
+class RolePermission(Base):
+    __tablename__ = "role_permissions"
+
+    role_id: Mapped[int] = mapped_column(ForeignKey("roles.id"), primary_key=True)
+    permission_id: Mapped[int] = mapped_column(ForeignKey("permissions.id"), primary_key=True)
+
+
+class UserAreaScope(Base):
+    """একজন ব্যবহারকারী কোন ভৌগোলিক এলাকার ভোটার ডেটা দেখতে পারবেন তার তালিকা -- একাধিক সারি
+    OR হিসেবে মেলানো হয়। super_admin-এর জন্য কোনো স্কোপ লাগে না (সব দেখতে পান)। scope_field
+    Voter মডেলের বিদ্যমান ভৌগোলিক কলামগুলোর একটা (upazila/union_name/ward/area_no/area_name)।"""
+    __tablename__ = "user_area_scopes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    scope_field: Mapped[str] = mapped_column(String(32), nullable=False)
+    scope_value: Mapped[str] = mapped_column(Text, nullable=False)
+
+
 class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     username: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(Text, nullable=False)
-    role: Mapped[str] = mapped_column(String(16), nullable=False, default="editor")  # admin | editor | viewer
+    role_id: Mapped[int] = mapped_column(ForeignKey("roles.id"), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    role: Mapped["Role"] = relationship()
+    area_scopes: Mapped[list["UserAreaScope"]] = relationship()
 
 
 class ImportBatch(Base):
@@ -89,6 +130,36 @@ class Voter(Base):
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
+class PrintBatch(Base):
+    """একটা "প্রিন্ট ব্যাচ" -- ফিল্টার করা ভোটারদের একটা স্ন্যাপশট, যাদের কার্ড একসাথে তৈরি/প্রিন্ট
+    করা হয়। voter_count ব্যাচ তৈরির সময়ের সংখ্যা -- পরে ভোটার ডেটা বদলালেও এই সংখ্যা বদলায় না।"""
+    __tablename__ = "print_batches"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    label: Mapped[str] = mapped_column(Text, nullable=False)
+    voter_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    printed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    items: Mapped[list["PrintBatchItem"]] = relationship(back_populates="batch")
+
+
+class PrintBatchItem(Base):
+    """একটা ব্যাচের একটা ভোটার-এন্ট্রি ও তার প্রিন্ট/বিতরণ অবস্থা। একই ভোটার একাধিক ব্যাচে
+    (রিপ্রিন্ট) থাকতে পারেন, তাই voters টেবিলে কলাম না রেখে আলাদা জয়েন-টেবিল।"""
+    __tablename__ = "print_batch_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    batch_id: Mapped[int] = mapped_column(ForeignKey("print_batches.id"), nullable=False)
+    voter_id: Mapped[int] = mapped_column(ForeignKey("voters.id"), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="pending")  # pending|printed|distributed
+    distributed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    batch: Mapped["PrintBatch"] = relationship(back_populates="items")
+    voter: Mapped["Voter"] = relationship()
+
+
 class AuditLog(Base):
     __tablename__ = "audit_log"
 
@@ -99,3 +170,16 @@ class AuditLog(Base):
     old_value: Mapped[str | None] = mapped_column(Text)
     new_value: Mapped[str | None] = mapped_column(Text)
     changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ActivityLog(Base):
+    """সিস্টেম-ব্যাপী কার্যক্রমের লগ (লগইন, ইউজার/রোল পরিবর্তন, এক্সপোর্ট, প্রিন্ট, ইমপোর্ট) --
+    উপরের AuditLog থেকে আলাদা, যেটা শুধু একটা ভোটার রেকর্ডের ফিল্ড-লেভেল পরিবর্তন ট্র্যাক করে।"""
+    __tablename__ = "activity_logs"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    action: Mapped[str] = mapped_column(String(64), nullable=False)
+    detail: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

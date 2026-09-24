@@ -142,4 +142,28 @@
   .pb-safe {
     padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
   }
+
+  /* কীবোর্ড-ফোকাস না পাওয়া পর্যন্ত স্ক্রিন-রিডার-অনলি -- ফোকাস পেলে দৃশ্যমান হয় (skip link-এর জন্য) */
+  .sr-only-focusable:not(:focus) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+}
+
+/* প্রাণী/অ্যানিমেশনে সংবেদনশীল ব্যবহারকারীদের জন্য -- reduced motion চাইলে সব
+   অ্যানিমেশন/ট্রানজিশন প্রায় তাৎক্ষণিক করে দেওয়া হয় */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -1,11 +1,12 @@
 import io
 
 import openpyxl
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..auth import get_current_user, require_admin
+from ..audit import log_activity
+from ..auth import get_current_user, require_permission
 from ..db import get_db
 from ..import_logic import VoterUpserter, bengali_row_to_record
 from ..models import ImportBatch, User
@@ -23,8 +24,9 @@ def list_batches(db: Session = Depends(get_db), _user: User = Depends(get_curren
 @router.post("", response_model=ImportResult)
 def import_excel(
     file: UploadFile,
+    request: Request,
     db: Session = Depends(get_db),
-    user: User = Depends(require_admin),
+    user: User = Depends(require_permission("manage_data")),
 ):
     if not file.filename or not file.filename.lower().endswith((".xlsx", ".xls")):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "শুধু .xlsx/.xls ফাইল সমর্থিত")
@@ -70,6 +72,10 @@ def import_excel(
         batch.updated_count = upserter.updated
         batch.error_count = errors
         batch.status = "done"
+        log_activity(db, user, "import_excel", detail={
+            "import_batch_id": batch.id, "filename": file.filename,
+            "inserted": upserter.inserted, "updated": upserter.updated, "errors": errors,
+        }, request=request)
         db.commit()
     except Exception as e:
         db.rollback()

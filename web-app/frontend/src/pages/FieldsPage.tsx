@@ -128,7 +128,7 @@ export function FieldsPage() {
                 <TableCell>{f.label}</TableCell>
                 <TableCell>{TYPE_LABELS[f.field_type] ?? f.field_type}</TableCell>
                 <TableCell className="text-right">
-                  <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(f.id)}>
+                  <Button variant="ghost" size="icon" aria-label={`${f.label} মুছুন`} onClick={() => deleteMutation.mutate(f.id)}>
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
                 </TableCell>

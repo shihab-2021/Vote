@@ -4,7 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select, func, or_, case, cast, Integer
 from sqlalchemy.orm import Session
 
-from ..auth import get_current_user
+from ..area_scope import apply_area_scope
+from ..auth import get_current_user, require_permission
 from ..db import get_db
 from ..models import Voter, User, CustomFieldDef
 from ..schemas import VoterOut, VoterCreate, VoterUpdate, VoterListResponse, VOTER_CORE_FIELDS
@@ -74,24 +75,16 @@ def _order_by(sort: str):
     return [SORTABLE.get(sort, Voter.name)]
 
 
-@router.get("", response_model=VoterListResponse)
-def list_voters(
-    search: str = "",
-    ward: str = "",
-    upazila: str = "",
-    union: str = "",
-    flagged: bool | None = None,
-    filters: str = "",
-    sort: str = "serial_no",
-    page: int = 1,
-    page_size: int = 50,
-    db: Session = Depends(get_db),
-    _user: User = Depends(get_current_user),
+def build_voter_query(
+    db: Session, user: User, *,
+    search: str = "", ward: str = "", upazila: str = "", union: str = "",
+    flagged: bool | None = None, filters: str = "",
 ):
-    page = max(page, 1)
-    page_size = min(max(page_size, 1), 200)
-
+    """তালিকা/এক্সপোর্ট/প্রিন্ট-ব্যাচ -- সবাই ঠিক একই ফিল্টার+এলাকা-স্কোপ যুক্তি ব্যবহার করে,
+    যাতে "কী দেখা যায়" আর "কী প্রিন্ট/এক্সপোর্ট হয়" কখনো আলাদা হয়ে না যায়। পেজিনেশন এখানে নেই --
+    কলার প্রয়োজনমতো .offset()/.limit() যোগ করে নেয়।"""
     q = select(Voter).where(Voter.deleted_at.is_(None))
+    q = apply_area_scope(q, user, db)
     if search:
         like = f"%{search}%"
         q = q.where(or_(
@@ -107,7 +100,30 @@ def list_voters(
         q = q.where(Voter.union_name == union)
     if flagged is not None:
         q = q.where(Voter.is_flagged == flagged)
-    q = _apply_generic_filters(q, filters, db)
+    return _apply_generic_filters(q, filters, db)
+
+
+@router.get("", response_model=VoterListResponse)
+def list_voters(
+    search: str = "",
+    ward: str = "",
+    upazila: str = "",
+    union: str = "",
+    flagged: bool | None = None,
+    filters: str = "",
+    sort: str = "serial_no",
+    page: int = 1,
+    page_size: int = 50,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    page = max(page, 1)
+    page_size = min(max(page_size, 1), 200)
+
+    q = build_voter_query(
+        db, user, search=search, ward=ward, upazila=upazila, union=union,
+        flagged=flagged, filters=filters,
+    )
 
     total = db.scalar(select(func.count()).select_from(q.subquery()))
 
@@ -120,7 +136,7 @@ def list_voters(
 @router.get("/addresses", response_model=list[str])
 def list_addresses(
     q: str = "", limit: int = 20,
-    db: Session = Depends(get_db), _user: User = Depends(get_current_user),
+    db: Session = Depends(get_db), user: User = Depends(get_current_user),
 ):
     """ঠিকানা অটোকমপ্লিটের জন্য -- বিদ্যমান ডেটায় থাকা distinct ঠিকানাগুলো থেকে মেলে এমনগুলো
     ফেরত দেয়, যাতে ব্যবহারকারী টাইপ করে একটা নির্দিষ্ট (হুবহু বিদ্যমান) ঠিকানা বেছে নিতে পারেন।
@@ -130,22 +146,33 @@ def list_addresses(
     stmt = select(Voter.address).where(
         Voter.deleted_at.is_(None), Voter.address.isnot(None), Voter.address != "",
     )
+    stmt = apply_area_scope(stmt, user, db)
     if q:
         stmt = stmt.where(Voter.address.ilike(f"%{q}%"))
     stmt = stmt.distinct().order_by(Voter.address).limit(limit)
     return db.scalars(stmt).all()
 
 
-@router.get("/{voter_id}", response_model=VoterOut)
-def get_voter(voter_id: int, db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
+def _get_scoped_voter(voter_id: int, user: User, db: Session) -> Voter:
+    """একক ভোটার রেকর্ড fetch করে, এলাকা-স্কোপ যাচাইসহ -- নাহলে scope-বহির্ভূত voter_id সরাসরি
+    URL-এ দিয়ে list/search এড়িয়ে গিয়েও দেখা/এডিট/ডিলিট করা যেত।"""
     voter = db.get(Voter, voter_id)
     if not voter or voter.deleted_at is not None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "ভোটার পাওয়া যায়নি")
+    if user.role.key != "super_admin":
+        in_scope = db.scalar(apply_area_scope(select(Voter.id), user, db).where(Voter.id == voter_id))
+        if in_scope is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "ভোটার পাওয়া যায়নি")
     return voter
 
 
+@router.get("/{voter_id}", response_model=VoterOut)
+def get_voter(voter_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    return _get_scoped_voter(voter_id, user, db)
+
+
 @router.post("", response_model=VoterOut, status_code=status.HTTP_201_CREATED)
-def create_voter(payload: VoterCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def create_voter(payload: VoterCreate, db: Session = Depends(get_db), user: User = Depends(require_permission("manage_data"))):
     data = payload.model_dump()
     voter = Voter(**data, created_by=user.id, updated_by=user.id)
     voter.flag_reasons = flag_record_by_field(data)
@@ -158,11 +185,9 @@ def create_voter(payload: VoterCreate, db: Session = Depends(get_db), user: User
 @router.patch("/{voter_id}", response_model=VoterOut)
 def update_voter(
     voter_id: int, payload: VoterUpdate,
-    db: Session = Depends(get_db), user: User = Depends(get_current_user),
+    db: Session = Depends(get_db), user: User = Depends(require_permission("manage_data")),
 ):
-    voter = db.get(Voter, voter_id)
-    if not voter or voter.deleted_at is not None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "ভোটার পাওয়া যায়নি")
+    voter = _get_scoped_voter(voter_id, user, db)
 
     updates = payload.model_dump(exclude_unset=True)
     for field, value in updates.items():
@@ -180,10 +205,8 @@ def update_voter(
 
 
 @router.delete("/{voter_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_voter(voter_id: int, db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
+def delete_voter(voter_id: int, db: Session = Depends(get_db), user: User = Depends(require_permission("manage_data"))):
     from datetime import datetime, timezone
-    voter = db.get(Voter, voter_id)
-    if not voter or voter.deleted_at is not None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "ভোটার পাওয়া যায়নি")
+    voter = _get_scoped_voter(voter_id, user, db)
     voter.deleted_at = datetime.now(timezone.utc)
     db.commit()

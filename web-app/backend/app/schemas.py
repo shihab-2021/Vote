@@ -8,11 +8,50 @@ class LoginRequest(BaseModel):
     password: str
 
 
-class UserOut(BaseModel):
+class RoleOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
+    id: int
+    key: str
+    label: str
+
+
+class AreaScopeIn(BaseModel):
+    scope_field: str  # upazila | union_name | ward | area_no | area_name
+    scope_value: str
+
+
+class AreaScopeOut(AreaScopeIn):
+    id: int
+
+
+class UserOut(BaseModel):
+    """auth.serialize_user()-এর তৈরি dict থেকে ভ্যালিডেট হয় -- role/permissions/area_scopes
+    জয়েন করে হিসেব করা হয় বলে সরাসরি ORM অবজেক্ট ম্যাপিং (from_attributes) ব্যবহার হয় না।"""
     id: int
     username: str
     role: str
+    role_label: str
+    is_active: bool
+    permissions: list[str]
+    area_scopes: list[AreaScopeOut] = []
+    created_at: datetime
+    last_login_at: datetime | None = None
+
+
+class UserCreate(BaseModel):
+    username: str
+    password: str
+    role_id: int
+    area_scopes: list[AreaScopeIn] = []
+
+
+class UserUpdate(BaseModel):
+    """সব ফিল্ড ঐচ্ছিক -- শুধু যা পাঠানো হবে তা আপডেট হবে। area_scopes দিলে পুরনো সব স্কোপ
+    প্রতিস্থাপিত হবে (আংশিক আপডেট না)।"""
+    role_id: int | None = None
+    is_active: bool | None = None
+    password: str | None = None
+    area_scopes: list[AreaScopeIn] | None = None
 
 
 VOTER_CORE_FIELDS = [

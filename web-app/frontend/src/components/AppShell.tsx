@@ -1,6 +1,6 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
 import {
-  LayoutDashboard, Users, Upload, ListPlus, LogOut, Vote, FileScan,
+  LayoutDashboard, Users, Upload, ListPlus, LogOut, Vote, FileScan, Search, UserCog, Printer, ScrollText,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
@@ -17,15 +17,19 @@ interface NavItem {
   label: string;
   icon: typeof LayoutDashboard;
   end?: boolean;
-  adminOnly?: boolean;
+  permission?: string;
 }
 
 const NAV: NavItem[] = [
-  { to: "/", label: "ড্যাশবোর্ড", icon: LayoutDashboard, end: true },
-  { to: "/voters", label: "ভোটার তালিকা", icon: Users },
-  { to: "/convert", label: "PDF কনভার্ট", icon: FileScan, adminOnly: true },
-  { to: "/import", label: "ইমপোর্ট", icon: Upload, adminOnly: true },
-  { to: "/fields", label: "কাস্টম ফিল্ড", icon: ListPlus, adminOnly: true },
+  { to: "/dashboard", label: "ড্যাশবোর্ড", icon: LayoutDashboard, end: true, permission: "view_reports" },
+  { to: "/search", label: "কুইক সার্চ", icon: Search, permission: "view_voter" },
+  { to: "/voters", label: "ভোটার তালিকা", icon: Users, permission: "view_voter" },
+  { to: "/print", label: "প্রিন্ট ও বিতরণ", icon: Printer, permission: "print_voter" },
+  { to: "/convert", label: "PDF কনভার্ট", icon: FileScan, permission: "manage_data" },
+  { to: "/import", label: "ইমপোর্ট", icon: Upload, permission: "manage_data" },
+  { to: "/fields", label: "কাস্টম ফিল্ড", icon: ListPlus, permission: "manage_data" },
+  { to: "/users", label: "ব্যবহারকারী", icon: UserCog, permission: "manage_users" },
+  { to: "/audit-logs", label: "অডিট লগ", icon: ScrollText, permission: "view_audit_logs" },
 ];
 
 function isActivePath(item: NavItem, pathname: string) {
@@ -35,10 +39,18 @@ function isActivePath(item: NavItem, pathname: string) {
 export function AppShell() {
   const { user, logout } = useAuth();
   const location = useLocation();
-  const visibleNav = NAV.filter((item) => !item.adminOnly || user?.role === "admin");
+  const visibleNav = NAV.filter((item) => !item.permission || user?.permissions.includes(item.permission));
 
   return (
     <SidebarProvider>
+      {/* কীবোর্ড ব্যবহারকারীরা প্রতি পেজে সাইডবার এড়িয়ে সরাসরি মূল কন্টেন্টে যেতে পারবেন --
+          ফোকাস না পাওয়া পর্যন্ত অদৃশ্য, ফোকাস পেলে (Tab চাপলে) দেখা যায় */}
+      <a
+        href="#main-content"
+        className="sr-only-focusable fixed top-2 left-2 z-50 rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground"
+      >
+        মূল বিষয়বস্তুতে যান
+      </a>
       {/* ডেস্কটপ/ট্যাবলেট -- বিদ্যমান sidebar অপরিবর্তিত */}
       <Sidebar collapsible="icon" className="hidden md:flex">
         <SidebarHeader>
@@ -123,7 +135,7 @@ export function AppShell() {
           <SidebarTrigger />
         </header>
 
-        <main className="flex-1 overflow-auto p-4 pb-24 md:p-6 md:pb-6">
+        <main id="main-content" tabIndex={-1} className="flex-1 overflow-auto p-4 pb-24 md:p-6 md:pb-6">
           <Outlet />
         </main>
 
@@ -134,15 +146,26 @@ export function AppShell() {
 }
 
 function MobileBottomNav({ items, pathname }: { items: NavItem[]; pathname: string }) {
+  // ৬টার বেশি আইটেম হলে flex-1 দিয়ে সমান ভাগ করলে লেবেল/আইকন গাদাগাদি হয়ে যায় -- তখন প্রতিটা
+  // আইটেমের একটা ন্যূনতম প্রস্থ রেখে বার-টা অনুভূমিকভাবে স্ক্রল করা যায়
+  const overflow = items.length > 6;
   return (
-    <nav className="pb-safe fixed inset-x-0 bottom-0 z-40 flex border-t bg-card/95 backdrop-blur-sm md:hidden">
+    <nav
+      className={cn(
+        "pb-safe fixed inset-x-0 bottom-0 z-40 flex border-t bg-card/95 backdrop-blur-sm md:hidden",
+        overflow && "overflow-x-auto"
+      )}
+    >
       {items.map((item) => {
         const active = isActivePath(item, pathname);
         return (
           <Link
             key={item.to}
             to={item.to}
-            className="flex flex-1 flex-col items-center justify-center gap-0.5 py-2 active:bg-muted/60"
+            className={cn(
+              "flex flex-col items-center justify-center gap-0.5 py-2 active:bg-muted/60",
+              overflow ? "w-[68px] shrink-0" : "flex-1"
+            )}
           >
             <span
               className={cn(

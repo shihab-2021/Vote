@@ -8,14 +8,15 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from sqlalchemy.orm import Session
 
 from .. import ocr_engine
-from ..auth import require_admin
+from ..audit import log_activity
+from ..auth import require_permission
 from ..config import settings
 from ..db import get_db, SessionLocal
 from ..excel_backup import write_excel_backup
@@ -41,12 +42,12 @@ def _public_job(job: dict) -> dict:
 
 
 @router.get("/status")
-def convert_status(_user: User = Depends(require_admin)):
+def convert_status(_user: User = Depends(require_permission("manage_data"))):
     return {"available": ocr_engine.OCR_AVAILABLE, "reason": ocr_engine.OCR_IMPORT_ERROR}
 
 
 @router.get("/browse")
-def browse(path: str = "", _user: User = Depends(require_admin)):
+def browse(path: str = "", _user: User = Depends(require_permission("manage_data"))):
     if not path:
         roots = [os.path.normpath(os.path.expanduser(settings.convert_output_dir))]
         try:
@@ -140,7 +141,7 @@ class ConvertRequest(BaseModel):
 
 
 @router.post("/start")
-def start_convert(payload: ConvertRequest, user: User = Depends(require_admin)):
+def start_convert(payload: ConvertRequest, user: User = Depends(require_permission("manage_data"))):
     if not ocr_engine.OCR_AVAILABLE:
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -167,7 +168,7 @@ def start_convert(payload: ConvertRequest, user: User = Depends(require_admin)):
 
 
 @router.get("/active")
-def active_job(_user: User = Depends(require_admin)):
+def active_job(_user: User = Depends(require_permission("manage_data"))):
     """পেজ লোড/রিলোড/ট্যাব-সুইচের পর চলমান বা রিভিউ-অপেক্ষমাণ (commit/discard হয়নি এমন)
     সর্বশেষ job থাকলে সেটা ফেরত দেয়, যাতে ফ্রন্টএন্ড প্রগ্রেস/প্রিভিউ-তে রিকানেক্ট করতে পারে।
     কনভার্সন নিজে ব্যাকগ্রাউন্ড thread-এ চলে বলে এটা ছাড়াই থেমে যায় না -- এটা শুধু UI রিকভারির জন্য।"""
@@ -180,7 +181,7 @@ def active_job(_user: User = Depends(require_admin)):
 
 
 @router.post("/jobs/{job_id}/stop")
-def stop_job(job_id: str, _user: User = Depends(require_admin)):
+def stop_job(job_id: str, _user: User = Depends(require_permission("manage_data"))):
     job = JOBS.get(job_id)
     if job is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "job পাওয়া যায়নি")
@@ -192,7 +193,7 @@ def stop_job(job_id: str, _user: User = Depends(require_admin)):
 
 
 @router.get("/jobs/{job_id}/stream")
-async def stream_job(job_id: str, _user: User = Depends(require_admin)):
+async def stream_job(job_id: str, _user: User = Depends(require_permission("manage_data"))):
     if job_id not in JOBS:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "job পাওয়া যায়নি")
 
@@ -232,7 +233,7 @@ def _get_pending_job(job_id: str) -> dict:
 
 
 @router.get("/jobs/{job_id}/preview")
-def preview_job(job_id: str, page: int = 1, page_size: int = 20, _user: User = Depends(require_admin)):
+def preview_job(job_id: str, page: int = 1, page_size: int = 20, _user: User = Depends(require_permission("manage_data"))):
     job = _get_pending_job(job_id)
     voters = job.get("voters", [])
     page = max(page, 1)
@@ -250,7 +251,10 @@ def preview_job(job_id: str, page: int = 1, page_size: int = 20, _user: User = D
 
 
 @router.post("/jobs/{job_id}/commit")
-def commit_job(job_id: str, user: User = Depends(require_admin), db: Session = Depends(get_db)):
+def commit_job(
+    job_id: str, request: Request,
+    user: User = Depends(require_permission("manage_data")), db: Session = Depends(get_db),
+):
     job = _get_pending_job(job_id)
     voters = job.get("voters", [])
     if not voters:
@@ -275,6 +279,10 @@ def commit_job(job_id: str, user: User = Depends(require_admin), db: Session = D
     batch.updated_count = upserter.updated
     batch.error_count = errors
     batch.status = "done"
+    log_activity(db, user, "pdf_convert_commit", detail={
+        "import_batch_id": batch.id, "pdf_path": job["pdf_path"],
+        "inserted": upserter.inserted, "updated": upserter.updated, "errors": errors,
+    }, request=request)
     db.commit()
 
     job["committed"] = True
@@ -286,7 +294,7 @@ def commit_job(job_id: str, user: User = Depends(require_admin), db: Session = D
 
 
 @router.post("/jobs/{job_id}/discard")
-def discard_job(job_id: str, _user: User = Depends(require_admin)):
+def discard_job(job_id: str, _user: User = Depends(require_permission("manage_data"))):
     JOBS.pop(job_id, None)
     return {"status": "discarded"}
 
@@ -424,7 +432,7 @@ class BatchConvertRequest(BaseModel):
 
 
 @router.post("/batch/start")
-def start_batch(payload: BatchConvertRequest, user: User = Depends(require_admin)):
+def start_batch(payload: BatchConvertRequest, user: User = Depends(require_permission("manage_data"))):
     if not ocr_engine.OCR_AVAILABLE:
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -462,7 +470,7 @@ def start_batch(payload: BatchConvertRequest, user: User = Depends(require_admin
 
 
 @router.get("/batch/active")
-def active_batch(_user: User = Depends(require_admin)):
+def active_batch(_user: User = Depends(require_permission("manage_data"))):
     """একক-PDF /active-এর মতোই -- পেজ রিলোড/ট্যাব-সুইচ/এমনকি কয়েকদিন পর ফিরে এলেও চলমান বা
     সবশেষ ব্যাচের অবস্থা এখান থেকেই দেখা যাবে। ব্যাচ নিজে ব্যাকগ্রাউন্ড thread-এ চলে বলে এই
     এন্ডপয়েন্ট না দেখলেও থেমে যায় না।"""
@@ -475,7 +483,7 @@ def active_batch(_user: User = Depends(require_admin)):
 
 
 @router.post("/batch/stop")
-def stop_batch(_user: User = Depends(require_admin)):
+def stop_batch(_user: User = Depends(require_permission("manage_data"))):
     """বর্তমান ফাইলটা সাথে সাথে থামিয়ে দেয় এবং বাকি ফাইলগুলো "skipped" হিসেবে চিহ্নিত করে --
     পুরো ব্যাচ থামানোর জন্য, শুধু বর্তমান ফাইল স্কিপ করে পরেরটায় যাওয়ার জন্য না।"""
     if not ACTIVE_BATCH_ID:
@@ -489,7 +497,7 @@ def stop_batch(_user: User = Depends(require_admin)):
 
 
 @router.post("/batch/discard")
-def discard_batch(_user: User = Depends(require_admin)):
+def discard_batch(_user: User = Depends(require_permission("manage_data"))):
     global LAST_BATCH_ID
     if LAST_BATCH_ID:
         BATCH_JOBS.pop(LAST_BATCH_ID, None)

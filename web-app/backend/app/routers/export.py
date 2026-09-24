@@ -2,39 +2,29 @@ import csv
 import io
 
 import openpyxl
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
-from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
-from ..auth import get_current_user
+from ..audit import log_activity
+from ..auth import require_permission
 from ..db import get_db
 from ..models import User, Voter
 from ..voter_rules import COLS
-from .voters import _apply_generic_filters
+from .voters import build_voter_query
 
 router = APIRouter(prefix="/api/export", tags=["export"])
 
 EXPORT_COLS = [(field, label) for _, label, field in COLS if field] + [("flag_reasons", "যাচাই প্রয়োজন")]
+MAX_EXPORT_ROWS = 5000  # একটা কুয়েরিতে অনির্দিষ্ট আকারের ফাইল তৈরি হয়ে যাওয়া আটকাতে
 
 
 def _filtered_voters(
-    db: Session, search: str, ward: str, upazila: str, flagged: bool | None, filters: str = "",
+    db: Session, user: User, search: str, ward: str, upazila: str, flagged: bool | None, filters: str = "",
 ):
-    q = select(Voter).where(Voter.deleted_at.is_(None))
-    if search:
-        like = f"%{search}%"
-        q = q.where(or_(Voter.name.ilike(like), Voter.voter_no.ilike(like),
-                         Voter.father_name.ilike(like), Voter.mother_name.ilike(like)))
-    if ward:
-        q = q.where(Voter.ward == ward)
-    if upazila:
-        q = q.where(Voter.upazila == upazila)
-    if flagged is not None:
-        q = q.where(Voter.is_flagged == flagged)
-    q = _apply_generic_filters(q, filters, db)
+    q = build_voter_query(db, user, search=search, ward=ward, upazila=upazila, flagged=flagged, filters=filters)
     q = q.order_by(Voter.name)
     return db.scalars(q).all()
 
@@ -47,24 +37,38 @@ def _row_value(voter: Voter, field: str):
 
 @router.get("")
 def export_voters(
+    request: Request,
     format: str = "xlsx",
     search: str = "", ward: str = "", upazila: str = "",
     flagged: bool | None = None,
     filters: str = "",
     db: Session = Depends(get_db),
-    _user: User = Depends(get_current_user),
+    user: User = Depends(require_permission("export_voter")),
 ):
-    voters = _filtered_voters(db, search, ward, upazila, flagged, filters)
+    voters = _filtered_voters(db, user, search, ward, upazila, flagged, filters)
+    if len(voters) > MAX_EXPORT_ROWS:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"একবারে সর্বোচ্চ {MAX_EXPORT_ROWS} জন এক্সপোর্ট করা যাবে -- ফিল্টার আরও নির্দিষ্ট করুন "
+            f"({len(voters)} জন মিলেছে)",
+        )
 
+    # লগ-অ্যাক্টিভিটির db.commit() সবসময় ফাইল তৈরি হওয়ার *পরে* কল হয় -- SQLAlchemy সেশনের
+    # ডিফল্ট expire_on_commit=True আচরণের কারণে commit-এর পর voters লিস্টের অবজেক্টগুলো "expired"
+    # হয়ে যায়, ফলে commit আগে করলে নিচের লুপে প্রতিটা attribute access-এ আলাদা করে DB থেকে
+    # রিলোড হতো (হাজার হাজার voter-এর জন্য কার্যত অসীম ধীরগতি -- আসলে ঘটেছিল, তাই এই কমেন্ট)।
     if format == "csv":
         buf = io.StringIO()
         writer = csv.writer(buf)
         writer.writerow([label for _, label in EXPORT_COLS])
         for v in voters:
             writer.writerow([_row_value(v, field) for field, _ in EXPORT_COLS])
-        buf.seek(0)
+        content = buf.getvalue()
+
+        log_activity(db, user, "export_voters", detail={"format": format, "count": len(voters)}, request=request)
+        db.commit()
         return StreamingResponse(
-            iter([buf.getvalue()]), media_type="text/csv",
+            iter([content]), media_type="text/csv",
             headers={"Content-Disposition": "attachment; filename=voters_export.csv"},
         )
 
@@ -101,6 +105,9 @@ def export_voters(
     out = io.BytesIO()
     wb.save(out)
     out.seek(0)
+
+    log_activity(db, user, "export_voters", detail={"format": format, "count": len(voters)}, request=request)
+    db.commit()
     return StreamingResponse(
         out, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": "attachment; filename=voters_export.xlsx"},

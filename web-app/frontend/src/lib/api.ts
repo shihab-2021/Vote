@@ -5,10 +5,28 @@ export const api = axios.create({
   withCredentials: true,
 });
 
+export interface AreaScope {
+  id: number;
+  scope_field: string;
+  scope_value: string;
+}
+
 export interface User {
   id: number;
   username: string;
-  role: "admin" | "editor" | "viewer";
+  role: string;
+  role_label: string;
+  is_active: boolean;
+  permissions: string[];
+  area_scopes: AreaScope[];
+  created_at: string;
+  last_login_at: string | null;
+}
+
+export interface RoleDef {
+  id: number;
+  key: string;
+  label: string;
 }
 
 export interface Voter {
@@ -168,6 +186,72 @@ export interface BatchActiveResponse {
   current_progress?: ConvertProgress | null;
   files?: BatchFileEntry[];
   started_at?: string;
+}
+
+export interface PrintBatchSummary {
+  id: number;
+  label: string;
+  voter_count: number;
+  printed_count: number;
+  distributed_count: number;
+  created_at: string;
+  printed_at: string | null;
+}
+
+export type PrintItemStatus = "pending" | "printed" | "distributed";
+
+export interface PrintBatchItemOut {
+  id: number;
+  voter_id: number;
+  name: string;
+  voter_no: string | null;
+  address: string | null;
+  status: PrintItemStatus;
+  distributed_at: string | null;
+}
+
+export interface PrintBatchDetail extends PrintBatchSummary {
+  items: PrintBatchItemOut[];
+}
+
+export interface PublicLookupRequest {
+  name: string;
+  father_name: string;
+  dob: string;
+  mother_name?: string;
+}
+
+export interface PublicVoterOut {
+  name: string;
+  voter_no: string | null;
+  serial_no: string | null;
+  ward: string | null;
+  upazila: string | null;
+  union_name: string | null;
+  area_name: string | null;
+}
+
+export interface PublicLookupResult {
+  found: boolean;
+  need_mother_name: boolean;
+  voter: PublicVoterOut | null;
+}
+
+export interface ActivityLogEntry {
+  id: number;
+  user_id: number | null;
+  username: string;
+  action: string;
+  detail: Record<string, unknown> | null;
+  ip: string | null;
+  created_at: string;
+}
+
+export interface ActivityLogResponse {
+  items: ActivityLogEntry[];
+  total: number;
+  page: number;
+  page_size: number;
 }
 
 export const VOTER_LABELS: Record<string, string> = {

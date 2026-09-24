@@ -4,7 +4,7 @@ import { api, type User } from "@/lib/api";
 interface AuthContextValue {
   user: User | null;
   loading: boolean;
-  login: (username: string, password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<User>;
   logout: () => Promise<void>;
 }
 
@@ -25,6 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function login(username: string, password: string) {
     const res = await api.post<User>("/auth/login", { username, password });
     setUser(res.data);
+    return res.data;
   }
 
   async function logout() {

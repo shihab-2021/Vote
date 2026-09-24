@@ -1,10 +1,12 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
   Search, Download, ChevronLeft, ChevronRight, Loader2, X, Plus, MapPin,
-  SlidersHorizontal, Users2, IdCard,
+  SlidersHorizontal, Users2, IdCard, Printer,
 } from "lucide-react";
+import { useAuth } from "@/auth/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -59,6 +61,8 @@ type DirtyMap = Record<string, Record<string, string>>; // voterId -> field -> v
 
 export function VotersPage() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [search, setSearch] = useState("");
   const [ward, setWard] = useState("");
   const [flaggedOnly, setFlaggedOnly] = useState(false);
@@ -66,6 +70,7 @@ export function VotersPage() {
   const [dirty, setDirty] = useState<DirtyMap>({});
   const [detailVoter, setDetailVoter] = useState<Voter | null>(null);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+  const [creatingBatch, setCreatingBatch] = useState(false);
   const pageSize = 50;
 
   // ঠিকানা অটোকমপ্লিট -- একটা বিদ্যমান ঠিকানা বেছে নিলে সেটা `address`-এ (হুবহু মিল) সেভ হয়
@@ -223,6 +228,26 @@ export function VotersPage() {
     a.download = `voters_export.${format}`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  async function createPrintBatch() {
+    setCreatingBatch(true);
+    try {
+      const res = await api.post<{ id: number; voter_count: number }>("/print-batches", null, {
+        params: {
+          search: search || undefined,
+          ward: ward || undefined,
+          flagged: flaggedOnly ? true : undefined,
+          filters: filtersPayload,
+        },
+      });
+      toast.success(`${res.data.voter_count} জনের প্রিন্ট ব্যাচ তৈরি হয়েছে`);
+      navigate(`/print/${res.data.id}`);
+    } catch (e: any) {
+      toast.error(e?.response?.data?.detail || "প্রিন্ট ব্যাচ তৈরি করা যায়নি");
+    } finally {
+      setCreatingBatch(false);
+    }
   }
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / pageSize)) : 1;
@@ -395,7 +420,7 @@ export function VotersPage() {
                 />
               )}
 
-              <Button variant="ghost" size="icon" onClick={() => removeFindByRow(idx)}>
+              <Button variant="ghost" size="icon" aria-label="এই ফিল্টার মুছুন" onClick={() => removeFindByRow(idx)}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -414,15 +439,23 @@ export function VotersPage() {
             {data ? `মোট ${data.total.toLocaleString("bn-BD")} জন` : "লোড হচ্ছে..."}
           </p>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}>
-            <Download className="h-4 w-4" /> <span className="hidden sm:inline">এক্সপোর্ট</span>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => exportData("xlsx")}>Excel (.xlsx)</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => exportData("csv")}>CSV</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center gap-2">
+          {user?.permissions.includes("generate_voter_card") && (
+            <Button variant="outline" size="sm" onClick={createPrintBatch} disabled={creatingBatch}>
+              {creatingBatch ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
+              <span className="hidden sm:inline">প্রিন্ট ব্যাচ তৈরি করুন</span>
+            </Button>
+          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}>
+              <Download className="h-4 w-4" /> <span className="hidden sm:inline">এক্সপোর্ট</span>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => exportData("xlsx")}>Excel (.xlsx)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportData("csv")}>CSV</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {/* মোবাইল -- সবসময় দৃশ্যমান সার্চ + একটা "ফিল্টার" বাটনে বাকি সব (বটম শিট) */}
@@ -638,13 +671,13 @@ export function VotersPage() {
           </span>
           <div className="flex gap-2">
             <Button
-              variant="outline" size="icon" className="h-10 w-10 md:h-8 md:w-8"
+              variant="outline" size="icon" className="h-10 w-10 md:h-8 md:w-8" aria-label="আগের পৃষ্ঠা"
               disabled={page <= 1} onClick={() => setPage((p) => p - 1)}
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <Button
-              variant="outline" size="icon" className="h-10 w-10 md:h-8 md:w-8"
+              variant="outline" size="icon" className="h-10 w-10 md:h-8 md:w-8" aria-label="পরের পৃষ্ঠা"
               disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}
             >
               <ChevronRight className="h-4 w-4" />

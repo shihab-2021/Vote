@@ -20,8 +20,10 @@ export function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      await login(username, password);
-      navigate("/", { replace: true });
+      const loggedInUser = await login(username, password);
+      // view_reports না থাকা রোলদের (field_search, print_distribution) জন্য ড্যাশবোর্ডের বদলে
+      // সরাসরি কুইক সার্চে -- ড্যাশবোর্ড দেখার অনুমতি নেই এমন কাউকে সেখানে পাঠালে রিডাইরেক্ট-লুপ হতো
+      navigate(loggedInUser.permissions.includes("view_reports") ? "/dashboard" : "/search", { replace: true });
     } catch {
       setError("ইউজারনেম বা পাসওয়ার্ড ভুল");
     } finally {
@@ -61,10 +63,14 @@ export function LoginPage() {
                 className="h-11"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                aria-invalid={!!error}
+                aria-describedby={error ? "login-error" : undefined}
                 required
               />
             </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            {error && (
+              <p id="login-error" role="alert" className="text-sm text-destructive">{error}</p>
+            )}
             <Button type="submit" className="h-11 w-full text-base" disabled={loading}>
               {loading && <Loader2 className="h-4 w-4 animate-spin" />}
               লগইন

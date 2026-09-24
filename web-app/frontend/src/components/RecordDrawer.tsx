@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { api, type FieldDef, type Voter, VOTER_LABELS } from "@/lib/api";
+import { useAuth } from "@/auth/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +23,10 @@ const CORE_KEYS = Object.keys(VOTER_LABELS) as (keyof typeof VOTER_LABELS)[];
 export function RecordDrawer({ voter, onClose }: RecordDrawerProps) {
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
+  const { user } = useAuth();
+  // manage_data না থাকলে (যেমন field_search/print_distribution রোল) এডিট করার অনুমতি নেই --
+  // ব্যাকএন্ডও require_permission("manage_data") দিয়ে একই জিনিস প্রয়োগ করে, এটা শুধু UX-এর জন্য
+  const canEdit = !!user?.permissions.includes("manage_data");
   const [form, setForm] = useState<Record<string, string>>({});
   const [extra, setExtra] = useState<Record<string, string>>({});
 
@@ -78,10 +83,14 @@ export function RecordDrawer({ voter, onClose }: RecordDrawerProps) {
               {CORE_KEYS.map((key) => (
                 <div key={key} className="space-y-1">
                   <Label className="text-xs text-muted-foreground">{VOTER_LABELS[key]}</Label>
-                  <Input
-                    value={form[key] ?? ""}
-                    onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
-                  />
+                  {canEdit ? (
+                    <Input
+                      value={form[key] ?? ""}
+                      onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
+                    />
+                  ) : (
+                    <p className="text-sm">{form[key] || "—"}</p>
+                  )}
                 </div>
               ))}
 
@@ -92,10 +101,14 @@ export function RecordDrawer({ voter, onClose }: RecordDrawerProps) {
                     {fieldDefs.map((fd) => (
                       <div key={fd.key} className="space-y-1">
                         <Label className="text-xs text-muted-foreground">{fd.label}</Label>
-                        <Input
-                          value={extra[fd.key] ?? ""}
-                          onChange={(e) => setExtra((x) => ({ ...x, [fd.key]: e.target.value }))}
-                        />
+                        {canEdit ? (
+                          <Input
+                            value={extra[fd.key] ?? ""}
+                            onChange={(e) => setExtra((x) => ({ ...x, [fd.key]: e.target.value }))}
+                          />
+                        ) : (
+                          <p className="text-sm">{extra[fd.key] || "—"}</p>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -104,9 +117,11 @@ export function RecordDrawer({ voter, onClose }: RecordDrawerProps) {
             </div>
 
             <SheetFooter>
-              <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
-                সংরক্ষণ করুন
-              </Button>
+              {canEdit && (
+                <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+                  সংরক্ষণ করুন
+                </Button>
+              )}
               <Button variant="outline" onClick={onClose}>
                 বন্ধ করুন
               </Button>

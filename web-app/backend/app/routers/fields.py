@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from ..auth import get_current_user, require_admin
+from ..auth import get_current_user, require_permission
 from ..db import get_db
 from ..models import CustomFieldDef, User
 from ..schemas import FieldDefCreate, FieldDefOut
@@ -17,7 +17,7 @@ def list_field_defs(db: Session = Depends(get_db), _user: User = Depends(get_cur
 
 
 @router.post("", response_model=FieldDefOut, status_code=status.HTTP_201_CREATED)
-def create_field_def(payload: FieldDefCreate, db: Session = Depends(get_db), user: User = Depends(require_admin)):
+def create_field_def(payload: FieldDefCreate, db: Session = Depends(get_db), user: User = Depends(require_permission("manage_data"))):
     field_def = CustomFieldDef(**payload.model_dump(), created_by=user.id)
     db.add(field_def)
     try:
@@ -30,7 +30,7 @@ def create_field_def(payload: FieldDefCreate, db: Session = Depends(get_db), use
 
 
 @router.delete("/{field_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_field_def(field_id: int, db: Session = Depends(get_db), _user: User = Depends(require_admin)):
+def delete_field_def(field_id: int, db: Session = Depends(get_db), _user: User = Depends(require_permission("manage_data"))):
     field_def = db.get(CustomFieldDef, field_id)
     if not field_def:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "ফিল্ড পাওয়া যায়নি")
