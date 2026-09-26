@@ -34,6 +34,7 @@ class UserOut(BaseModel):
     is_active: bool
     permissions: list[str]
     area_scopes: list[AreaScopeOut] = []
+    candidate_id: int | None = None
     created_at: datetime
     last_login_at: datetime | None = None
 
@@ -41,8 +42,14 @@ class UserOut(BaseModel):
 class UserCreate(BaseModel):
     username: str
     password: str
-    role_id: int
+    # candidate-actর নিজের এজেন্ট তৈরি করলে None রাখা যায় -- ব্যাকএন্ড তখন candidate_agent
+    # রোল জোর করে বসিয়ে দেয়; বাকি সবার জন্য (super_admin/manage_users) আবশ্যক
+    role_id: int | None = None
     area_scopes: list[AreaScopeIn] = []
+    # শুধু super_admin/manage_users ব্যবহারকারীরা সেট করতে পারেন (candidate/candidate_agent
+    # ইউজারের জন্য কোন প্রার্থীর সাথে যুক্ত করতে হবে) -- একজন candidate অ্যাক্টর নিজে এজেন্ট
+    # তৈরি করলে এই ভ্যালু নির্বিশেষে নিজের candidate_id দিয়ে জোর করে বদলে দেওয়া হয়
+    candidate_id: int | None = None
 
 
 class UserUpdate(BaseModel):
@@ -52,6 +59,41 @@ class UserUpdate(BaseModel):
     is_active: bool | None = None
     password: str | None = None
     area_scopes: list[AreaScopeIn] | None = None
+    candidate_id: int | None = None
+
+
+class CandidateBase(BaseModel):
+    name: str
+    constituency_label: str | None = None
+    symbol_name: str | None = None
+    slogan: str | None = None
+    primary_color: str | None = None
+    accent_color: str | None = None
+
+
+class CandidateCreate(CandidateBase):
+    pass
+
+
+class CandidateUpdate(BaseModel):
+    """সব ফিল্ড ঐচ্ছিক। candidate নিজে PATCH /candidates/me দিয়ে এটাই ব্যবহার করেন (name বাদে
+    সবকিছু নিজে বদলাতে পারেন), super_admin PATCH /candidates/{id} দিয়ে name/is_active সহ সব।"""
+    name: str | None = None
+    constituency_label: str | None = None
+    symbol_name: str | None = None
+    slogan: str | None = None
+    primary_color: str | None = None
+    accent_color: str | None = None
+    is_active: bool | None = None
+
+
+class CandidateOut(CandidateBase):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    is_active: bool
+    has_symbol_image: bool = False
+    has_photo_image: bool = False
+    created_at: datetime
 
 
 VOTER_CORE_FIELDS = [

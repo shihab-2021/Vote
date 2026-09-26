@@ -91,6 +91,7 @@ def serialize_user(user: User, db: Session) -> dict:
         "area_scopes": [
             {"id": s.id, "scope_field": s.scope_field, "scope_value": s.scope_value} for s in scopes
         ],
+        "candidate_id": user.candidate_id,
         "created_at": user.created_at,
         "last_login_at": user.last_login_at,
     }
@@ -103,6 +104,20 @@ def require_permission(key: str):
         if user.role.key == "super_admin":
             return user
         if key not in user_permission_keys(user, db):
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "এই কাজের অনুমতি নেই")
+        return user
+    return dependency
+
+
+def require_any_permission(*keys: str):
+    """উপরের require_permission-এর মতোই, কিন্তু কোনো একটা key থাকলেই যথেষ্ট -- যেমন
+    /api/users, super_admin-এর manage_users অথবা একজন candidate-এর manage_own_agents
+    দুটোতেই ব্যবহৃত হয় (নিজের এজেন্ট তৈরি/এডিট করার জন্য)।"""
+    def dependency(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> User:
+        if user.role.key == "super_admin":
+            return user
+        owned = user_permission_keys(user, db)
+        if not any(k in owned for k in keys):
             raise HTTPException(status.HTTP_403_FORBIDDEN, "এই কাজের অনুমতি নেই")
         return user
     return dependency

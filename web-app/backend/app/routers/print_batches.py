@@ -13,7 +13,7 @@ from ..audit import log_activity
 from ..auth import require_permission
 from ..card_pdf import build_batch_pdf
 from ..db import get_db
-from ..models import PrintBatch, PrintBatchItem, User, Voter
+from ..models import Candidate, PrintBatch, PrintBatchItem, User, Voter
 from .voters import build_voter_query
 
 router = APIRouter(prefix="/api/print-batches", tags=["print"])
@@ -65,12 +65,17 @@ def create_batch(
         )
 
     label = search or ward or upazila or union or "সব ভোটার"
-    batch = PrintBatch(created_by=user.id, label=f"{label} ({len(voter_ids)} জন)", voter_count=len(voter_ids))
+    batch = PrintBatch(
+        created_by=user.id, label=f"{label} ({len(voter_ids)} জন)", voter_count=len(voter_ids),
+        candidate_id=user.candidate_id,
+    )
     db.add(batch)
     db.flush()
     for vid in voter_ids:
         db.add(PrintBatchItem(batch_id=batch.id, voter_id=vid, status="pending"))
-    log_activity(db, user, "print_batch_create", detail={"batch_id": batch.id, "voter_count": len(voter_ids)}, request=request)
+    log_activity(db, user, "print_batch_create", detail={
+        "batch_id": batch.id, "voter_count": len(voter_ids), "candidate_id": user.candidate_id,
+    }, request=request)
     db.commit()
     db.refresh(batch)
     return _serialize_batch(batch)
@@ -116,8 +121,9 @@ def download_batch_pdf(
     batch = _get_owned_batch(batch_id, user, db)
     items = db.scalars(select(PrintBatchItem).where(PrintBatchItem.batch_id == batch_id)).all()
     voters = [it.voter for it in items]
+    candidate = db.get(Candidate, batch.candidate_id) if batch.candidate_id else None
 
-    pdf_bytes = build_batch_pdf(voters)
+    pdf_bytes = build_batch_pdf(voters, candidate=candidate)
 
     first_print = batch.printed_at is None
     if first_print:

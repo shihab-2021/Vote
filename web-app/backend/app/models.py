@@ -2,7 +2,7 @@ from datetime import datetime
 
 from sqlalchemy import (
     ARRAY, Boolean, Computed, DateTime, ForeignKey, Integer, BigInteger,
-    String, Text, func,
+    LargeBinary, String, Text, func,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -47,6 +47,28 @@ class UserAreaScope(Base):
     scope_value: Mapped[str] = mapped_column(Text, nullable=False)
 
 
+class Candidate(Base):
+    """একজন নির্বাচনী প্রার্থীর ব্র্যান্ডিং প্রোফাইল -- প্রতীক/ছবি/স্লোগান/রঙ, যা দিয়ে তার ও তার
+    এজেন্টদের তৈরি প্রিন্ট-ব্যাচের ভোটার স্লিপ কাস্টমাইজড হয়। এলাকা-সীমাবদ্ধতা এখানে নেই -- সেটা
+    বিদ্যমান user_area_scopes দিয়েই হয় (এই প্রার্থীর লগইন ইউজারের স্কোপ হিসেবে), এটা শুধু
+    ব্র্যান্ডিং-মালিকানার তথ্য রাখে। ছবি bytea হিসেবে রাখা হয়েছে যাতে হোস্টিং ডিস্ক পার্সিস্টেন্ট
+    না হলেও রিডিপ্লয়ে আপলোড হারিয়ে না যায়।"""
+    __tablename__ = "candidates"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    constituency_label: Mapped[str | None] = mapped_column(Text, nullable=True)
+    symbol_name: Mapped[str | None] = mapped_column(Text, nullable=True)
+    symbol_image: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    photo_image: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    slogan: Mapped[str | None] = mapped_column(Text, nullable=True)
+    primary_color: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    accent_color: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -55,11 +77,15 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(Text, nullable=False)
     role_id: Mapped[int] = mapped_column(ForeignKey("roles.id"), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    candidate_id: Mapped[int | None] = mapped_column(ForeignKey("candidates.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     role: Mapped["Role"] = relationship()
     area_scopes: Mapped[list["UserAreaScope"]] = relationship()
+    # candidates.created_by-ও users.id-কে রেফার করে, তাই এই দুই টেবিলের মধ্যে একাধিক FK পথ
+    # আছে -- foreign_keys না দিলে SQLAlchemy কোনটা ব্যবহার করবে বুঝতে পারে না (AmbiguousForeignKeysError)
+    candidate: Mapped["Candidate | None"] = relationship(foreign_keys=[candidate_id])
 
 
 class ImportBatch(Base):
@@ -141,8 +167,10 @@ class PrintBatch(Base):
     label: Mapped[str] = mapped_column(Text, nullable=False)
     voter_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     printed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    candidate_id: Mapped[int | None] = mapped_column(ForeignKey("candidates.id"), nullable=True)
 
     items: Mapped[list["PrintBatchItem"]] = relationship(back_populates="batch")
+    candidate: Mapped["Candidate | None"] = relationship()
 
 
 class PrintBatchItem(Base):

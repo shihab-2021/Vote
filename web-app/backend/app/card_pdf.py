@@ -9,11 +9,12 @@
 @fontsource-variable/noto-sans-bengali প্যাকেজের bengali+latin সাবসেট ভ্যারিয়েবল ফন্ট থেকে
 static Regular/Bold TTF বানিয়ে এখানে (assets/fonts/) রাখা হয়েছে, কারণ fpdf2 সরাসরি
 variable font বা .woff2 নেয় না, আর শুধু "bengali" সাবসেটে ইংরেজি/সংখ্যা গ্লিফ নেই।"""
+import io
 from pathlib import Path
 
 from fpdf import FPDF
 
-from .models import Voter
+from .models import Candidate, Voter
 
 FONT_DIR = Path(__file__).parent / "assets" / "fonts"
 
@@ -28,6 +29,22 @@ MARGIN_MM = 10
 GAP_MM = 5
 ADDRESS_MAX_CHARS = 70
 
+# একজন প্রার্থীর ব্র্যান্ডেড স্লিপে বাধ্যতামূলক এই সতর্কীকরণ লাইন -- এটা যাতে নির্বাচন কমিশনের
+# সরকারি নথি বলে ভুল বোঝাবুঝি না হয়, তার একটা সহজ প্রশমন
+DISCLAIMER = "এই স্লিপটি ব্যক্তিগত প্রচারণা উপকরণ, নির্বাচন কমিশনের সরকারি নথি নয়"
+
+
+def _hex_to_rgb(hex_color: str | None, default: tuple[int, int, int]) -> tuple[int, int, int]:
+    if not hex_color:
+        return default
+    h = hex_color.lstrip("#")
+    if len(h) != 6:
+        return default
+    try:
+        return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
+    except ValueError:
+        return default
+
 
 def _register_fonts(pdf: FPDF) -> None:
     pdf.add_font("NotoBengali", "", str(FONT_DIR / "NotoSansBengali-Regular.ttf"))
@@ -39,21 +56,51 @@ def _truncate(text: str, limit: int) -> str:
     return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
 
 
-def _draw_card(pdf: FPDF, x: float, y: float, w: float, h: float, voter: Voter) -> None:
-    pdf.set_draw_color(*GREEN)
+def _draw_card(pdf: FPDF, x: float, y: float, w: float, h: float, voter: Voter, candidate: Candidate | None) -> None:
+    header_color = _hex_to_rgb(candidate.primary_color if candidate else None, GREEN)
+    accent_color = _hex_to_rgb(candidate.accent_color if candidate else None, RED)
+    header_h = 12 if candidate else 7
+
+    pdf.set_draw_color(*header_color)
     pdf.set_line_width(0.4)
     pdf.rect(x, y, w, h)
 
-    pdf.set_fill_color(*GREEN)
-    pdf.rect(x, y, w, 7, style="F")
-    pdf.set_xy(x + 2, y + 1)
+    pdf.set_fill_color(*header_color)
+    pdf.rect(x, y, w, header_h, style="F")
     pdf.set_text_color(255, 255, 255)
-    pdf.set_font("NotoBengali", "B", 9)
-    pdf.cell(w - 4, 5, "ভোটার তালিকা অ্যাপ", new_x="LMARGIN", new_y="NEXT")
+
+    if candidate:
+        text_x = x + 2
+        if candidate.symbol_image:
+            try:
+                pdf.image(io.BytesIO(candidate.symbol_image), x=x + 2, y=y + 1.2, h=header_h - 2.4)
+                text_x = x + 2 + (header_h - 2.4) + 1.5
+            except Exception:
+                pass
+        photo_w = 0.0
+        if candidate.photo_image:
+            try:
+                photo_w = header_h - 2.4
+                pdf.image(io.BytesIO(candidate.photo_image), x=x + w - 2 - photo_w, y=y + 1.2, h=photo_w)
+            except Exception:
+                photo_w = 0.0
+
+        text_w = w - (text_x - x) - photo_w - 3
+        pdf.set_xy(text_x, y + 1)
+        pdf.set_font("NotoBengali", "B", 8.5)
+        pdf.multi_cell(text_w, 3.6, _truncate(candidate.name, 30), new_x="LMARGIN", new_y="NEXT")
+        if candidate.slogan:
+            pdf.set_xy(text_x, y + 1 + 3.6)
+            pdf.set_font("NotoBengali", "", 7)
+            pdf.multi_cell(text_w, 3.4, _truncate(candidate.slogan, 40), new_x="LMARGIN", new_y="NEXT")
+    else:
+        pdf.set_xy(x + 2, y + 1)
+        pdf.set_font("NotoBengali", "B", 9)
+        pdf.cell(w - 4, 5, "ভোটার তালিকা অ্যাপ", new_x="LMARGIN", new_y="NEXT")
 
     pdf.set_text_color(*DARK_TEXT)
     line_h = 4.6
-    ty = y + 9
+    ty = y + header_h + 2
 
     pdf.set_font("NotoBengali", "B", 10)
     pdf.set_xy(x + 3, ty)
@@ -76,14 +123,25 @@ def _draw_card(pdf: FPDF, x: float, y: float, w: float, h: float, voter: Voter) 
     pdf.set_xy(x + 3, ty)
     pdf.multi_cell(w - 6, line_h, f"ঠিকানা: {_truncate(voter.address or '-', ADDRESS_MAX_CHARS)}")
 
-    pdf.set_draw_color(*RED)
+    if candidate:
+        pdf.set_font("NotoBengali", "", 5.8)
+        pdf.set_text_color(90, 90, 90)
+        pdf.set_xy(x + 3, y + h - 5.5)
+        pdf.multi_cell(w - 6, 2.6, DISCLAIMER)
+        pdf.set_text_color(*DARK_TEXT)
+
+    pdf.set_draw_color(*accent_color)
     pdf.set_line_width(0.8)
-    pdf.line(x, y + h - 1.5, x + w, y + h - 1.5)
+    pdf.line(x, y + h - 1.2, x + w, y + h - 1.2)
 
 
-def build_batch_pdf(voters: list[Voter]) -> bytes:
+def build_batch_pdf(voters: list[Voter], candidate: Candidate | None = None) -> bytes:
     """একটা প্রিন্ট-ব্যাচের সব ভোটারের কার্ড ধারণকারী PDF বানায় -- A4 পৃষ্ঠায় ৮টা কার্ড
-    (২ কলাম x ৪ সারি)। কোনো ভোটার না থাকলেও অন্তত একটা ফাঁকা-বার্তা পৃষ্ঠা ফেরত দেয়।"""
+    (২ কলাম x ৪ সারি)। কোনো ভোটার না থাকলেও অন্তত একটা ফাঁকা-বার্তা পৃষ্ঠা ফেরত দেয়।
+
+    candidate দেওয়া থাকলে (candidate/candidate_agent-এর তৈরি ব্যাচ) হেডারে তার প্রতীক/ছবি/
+    স্লোগান/রঙ এবং একটা সতর্কীকরণ লাইন দেখানো হয় -- না দিলে (internal-staff ব্যাচ) আগের মতোই
+    নিরপেক্ষ সবুজ/লাল ডিজাইন অপরিবর্তিত থাকে।"""
     pdf = FPDF(format="A4", unit="mm")
     _register_fonts(pdf)
 
@@ -107,6 +165,6 @@ def build_batch_pdf(voters: list[Voter]) -> bytes:
         row, col = divmod(pos, CARD_COLS)
         x = MARGIN_MM + col * (card_w + GAP_MM)
         y = MARGIN_MM + row * (card_h + GAP_MM)
-        _draw_card(pdf, x, y, card_w, card_h, voter)
+        _draw_card(pdf, x, y, card_w, card_h, voter, candidate)
 
     return bytes(pdf.output())

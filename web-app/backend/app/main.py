@@ -10,7 +10,7 @@ from .config import settings
 from .db import SessionLocal
 from .models import Role, User
 from .routers import (
-    activity_logs, auth, convert, export, fields, imports, print_batches, public, stats, users, voters,
+    activity_logs, auth, candidates, convert, export, fields, imports, print_batches, public, stats, users, voters,
 )
 
 app = FastAPI(title="ভোটার তালিকা অ্যাপ (হোস্টেড)")
@@ -27,6 +27,7 @@ app.include_router(users.roles_router)
 app.include_router(print_batches.router)
 app.include_router(public.router)
 app.include_router(activity_logs.router)
+app.include_router(candidates.router)
 
 
 @app.get("/api/health")

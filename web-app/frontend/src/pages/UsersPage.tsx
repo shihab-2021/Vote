@@ -18,7 +18,9 @@ import {
 } from "@/components/ui/sheet";
 import { Checkbox } from "@/components/ui/checkbox";
 import { WarmEmptyState } from "@/components/motifs/WarmEmptyState";
-import { api, type RoleDef, type User } from "@/lib/api";
+import { api, type Candidate, type RoleDef, type User } from "@/lib/api";
+
+const CANDIDATE_ROLE_KEYS = ["candidate", "candidate_agent"];
 
 const SCOPE_FIELD_OPTIONS = [
   { value: "upazila", label: "উপজেলা" },
@@ -77,9 +79,11 @@ export function UsersPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [roleId, setRoleId] = useState<number | null>(null);
+  const [candidateId, setCandidateId] = useState<number | null>(null);
   const [newScopes, setNewScopes] = useState<ScopeRow[]>([]);
   const [editUser, setEditUser] = useState<User | null>(null);
   const [editRoleId, setEditRoleId] = useState<number | null>(null);
+  const [editCandidateId, setEditCandidateId] = useState<number | null>(null);
   const [editScopes, setEditScopes] = useState<ScopeRow[]>([]);
   const [editActive, setEditActive] = useState(true);
 
@@ -91,15 +95,23 @@ export function UsersPage() {
     queryKey: ["users"],
     queryFn: () => api.get<User[]>("/users").then((r) => r.data),
   });
+  const { data: candidates } = useQuery({
+    queryKey: ["candidates"],
+    queryFn: () => api.get<Candidate[]>("/candidates").then((r) => r.data),
+  });
+
+  const roleIsCandidate = (id: number | null) =>
+    !!id && CANDIDATE_ROLE_KEYS.includes(roles?.find((r) => r.id === id)?.key ?? "");
 
   const createMutation = useMutation({
     mutationFn: () => api.post("/users", {
       username, password, role_id: roleId,
+      candidate_id: roleIsCandidate(roleId) ? candidateId : null,
       area_scopes: newScopes.filter((s) => s.scope_value.trim()),
     }),
     onSuccess: () => {
       toast.success("ব্যবহারকারী তৈরি হয়েছে");
-      setUsername(""); setPassword(""); setRoleId(null); setNewScopes([]);
+      setUsername(""); setPassword(""); setRoleId(null); setCandidateId(null); setNewScopes([]);
       queryClient.invalidateQueries({ queryKey: ["users"] });
     },
     onError: (e: any) => toast.error(e?.response?.data?.detail || "ব্যবহারকারী তৈরি করা যায়নি"),
@@ -108,6 +120,7 @@ export function UsersPage() {
   const updateMutation = useMutation({
     mutationFn: () => api.patch(`/users/${editUser!.id}`, {
       role_id: editRoleId,
+      candidate_id: roleIsCandidate(editRoleId) ? editCandidateId : null,
       is_active: editActive,
       area_scopes: editScopes.filter((s) => s.scope_value.trim()),
     }),
@@ -122,6 +135,7 @@ export function UsersPage() {
   function openEdit(u: User) {
     setEditUser(u);
     setEditRoleId(roles?.find((r) => r.key === u.role)?.id ?? null);
+    setEditCandidateId(u.candidate_id);
     setEditScopes(u.area_scopes.map((s) => ({ scope_field: s.scope_field, scope_value: s.scope_value })));
     setEditActive(u.is_active);
   }
@@ -168,6 +182,19 @@ export function UsersPage() {
                 </Select>
               </div>
             </div>
+            {roleIsCandidate(roleId) && (
+              <div className="space-y-1">
+                <Label className="text-xs">প্রার্থী</Label>
+                <Select value={candidateId ? String(candidateId) : ""} onValueChange={(v) => v && setCandidateId(Number(v))}>
+                  <SelectTrigger className="w-full sm:w-[280px]">
+                    <SelectValue>{() => candidates?.find((c) => c.id === candidateId)?.name ?? "প্রার্থী বাছাই করুন"}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {candidates?.map((c) => (<SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <ScopeEditor rows={newScopes} onChange={setNewScopes} />
             <Button type="submit" disabled={createMutation.isPending || !username || !password || !roleId}>
               <Plus className="h-4 w-4" /> তৈরি করুন
@@ -237,6 +264,19 @@ export function UsersPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                {roleIsCandidate(editRoleId) && (
+                  <div className="space-y-1">
+                    <Label className="text-xs">প্রার্থী</Label>
+                    <Select value={editCandidateId ? String(editCandidateId) : ""} onValueChange={(v) => v && setEditCandidateId(Number(v))}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue>{() => candidates?.find((c) => c.id === editCandidateId)?.name ?? "প্রার্থী বাছাই করুন"}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {candidates?.map((c) => (<SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <ScopeEditor rows={editScopes} onChange={setEditScopes} />
                 <label className="flex items-center gap-2 text-sm">
                   <Checkbox checked={editActive} onCheckedChange={(v) => setEditActive(!!v)} />

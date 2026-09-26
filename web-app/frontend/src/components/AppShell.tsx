@@ -1,6 +1,7 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, Upload, ListPlus, LogOut, Vote, FileScan, Search, UserCog, Printer, ScrollText,
+  Award, Megaphone, Users2,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
@@ -20,6 +21,7 @@ interface NavItem {
   icon: typeof LayoutDashboard;
   end?: boolean;
   permission?: string;
+  requiresCandidate?: boolean;
 }
 
 const NAV: NavItem[] = [
@@ -27,10 +29,13 @@ const NAV: NavItem[] = [
   { to: "/search", label: "কুইক সার্চ", icon: Search, permission: "view_voter" },
   { to: "/voters", label: "ভোটার তালিকা", icon: Users, permission: "view_voter" },
   { to: "/print", label: "প্রিন্ট ও বিতরণ", icon: Printer, permission: "print_voter" },
+  { to: "/my-campaign", label: "আমার প্রচারণা", icon: Megaphone, permission: "manage_own_template", requiresCandidate: true },
+  { to: "/my-agents", label: "আমার এজেন্ট", icon: Users2, permission: "manage_own_agents", requiresCandidate: true },
   { to: "/convert", label: "PDF কনভার্ট", icon: FileScan, permission: "manage_data" },
   { to: "/import", label: "ইমপোর্ট", icon: Upload, permission: "manage_data" },
   { to: "/fields", label: "কাস্টম ফিল্ড", icon: ListPlus, permission: "manage_data" },
   { to: "/users", label: "ব্যবহারকারী", icon: UserCog, permission: "manage_users" },
+  { to: "/candidates", label: "প্রার্থী", icon: Award, permission: "manage_candidates" },
   { to: "/audit-logs", label: "অডিট লগ", icon: ScrollText, permission: "view_audit_logs" },
 ];
 
@@ -41,7 +46,13 @@ function isActivePath(item: NavItem, pathname: string) {
 export function AppShell() {
   const { user, logout } = useAuth();
   const location = useLocation();
-  const visibleNav = NAV.filter((item) => !item.permission || user?.permissions.includes(item.permission));
+  // super_admin implicitly পায় সব permission (manage_own_template/manage_own_agents-ও), কিন্তু
+  // candidate_id ছাড়া "আমার প্রচারণা"/"আমার এজেন্ট" পেজ দুটো অর্থহীন -- সেগুলো candidate_id
+  // থাকা ইউজারদের জন্যই দেখানো হয়, নাহলে ক্লিক করলে ফাঁকা পেজ দেখাত
+  const visibleNav = NAV.filter((item) =>
+    (!item.permission || user?.permissions.includes(item.permission)) &&
+    (!item.requiresCandidate || !!user?.candidate_id)
+  );
 
   return (
     <SidebarProvider>

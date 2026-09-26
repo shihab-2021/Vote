@@ -15,6 +15,9 @@ import { PrintBatchesPage } from "@/pages/PrintBatchesPage";
 import { PrintBatchDetailPage } from "@/pages/PrintBatchDetailPage";
 import { CitizenFindPage } from "@/pages/CitizenFindPage";
 import { AuditLogPage } from "@/pages/AuditLogPage";
+import { CandidatesPage } from "@/pages/CandidatesPage";
+import { MyCampaignPage } from "@/pages/MyCampaignPage";
+import { MyAgentsPage } from "@/pages/MyAgentsPage";
 import { Loader2 } from "lucide-react";
 
 /** রুট ("/") -- না লগইন করা ভিজিটরের জন্য পাবলিক LandingPage, লগইন করা থাকলে সরাসরি /dashboard-এ।
@@ -64,6 +67,15 @@ export default function App() {
               </Route>
               <Route element={<ProtectedRoute permission="view_audit_logs" />}>
                 <Route path="/audit-logs" element={<AuditLogPage />} />
+              </Route>
+              <Route element={<ProtectedRoute permission="manage_candidates" />}>
+                <Route path="/candidates" element={<CandidatesPage />} />
+              </Route>
+              <Route element={<ProtectedRoute permission="manage_own_template" />}>
+                <Route path="/my-campaign" element={<MyCampaignPage />} />
+              </Route>
+              <Route element={<ProtectedRoute permission="manage_own_agents" />}>
+                <Route path="/my-agents" element={<MyAgentsPage />} />
               </Route>
             </Route>
           </Route>

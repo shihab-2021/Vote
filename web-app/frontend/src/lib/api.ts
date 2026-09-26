@@ -19,8 +19,23 @@ export interface User {
   is_active: boolean;
   permissions: string[];
   area_scopes: AreaScope[];
+  candidate_id: number | null;
   created_at: string;
   last_login_at: string | null;
+}
+
+export interface Candidate {
+  id: number;
+  name: string;
+  constituency_label: string | null;
+  symbol_name: string | null;
+  slogan: string | null;
+  primary_color: string | null;
+  accent_color: string | null;
+  is_active: boolean;
+  has_symbol_image: boolean;
+  has_photo_image: boolean;
+  created_at: string;
 }
 
 export interface RoleDef {
