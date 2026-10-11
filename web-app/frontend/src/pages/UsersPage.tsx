@@ -157,7 +157,7 @@ export function UsersPage() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              if (username && password && roleId) createMutation.mutate();
+              if (username && password && roleId && (!roleIsCandidate(roleId) || candidateId)) createMutation.mutate();
             }}
             className="space-y-4"
           >
@@ -196,7 +196,10 @@ export function UsersPage() {
               </div>
             )}
             <ScopeEditor rows={newScopes} onChange={setNewScopes} />
-            <Button type="submit" disabled={createMutation.isPending || !username || !password || !roleId}>
+            <Button
+              type="submit"
+              disabled={createMutation.isPending || !username || !password || !roleId || (roleIsCandidate(roleId) && !candidateId)}
+            >
               <Plus className="h-4 w-4" /> তৈরি করুন
             </Button>
           </form>
@@ -284,7 +287,10 @@ export function UsersPage() {
                 </label>
               </div>
               <SheetFooter>
-                <Button onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending}>
+                <Button
+                  onClick={() => updateMutation.mutate()}
+                  disabled={updateMutation.isPending || (roleIsCandidate(editRoleId) && !editCandidateId)}
+                >
                   সংরক্ষণ করুন
                 </Button>
                 <Button variant="outline" onClick={() => setEditUser(null)}>বন্ধ করুন</Button>

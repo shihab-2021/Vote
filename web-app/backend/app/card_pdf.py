@@ -13,6 +13,7 @@ import io
 from pathlib import Path
 
 from fpdf import FPDF
+from PIL import Image as PILImage
 
 from .models import Candidate, Voter
 
@@ -25,9 +26,14 @@ RED = (176, 42, 42)
 DARK_TEXT = (20, 20, 20)
 
 CARD_COLS, CARD_ROWS = 2, 4
+# প্রার্থী-ব্র্যান্ডেড স্লিপে ছবি+প্রতীক+স্লোগান+ভোটার-তথ্য সবকিছু স্পষ্টভাবে ধরাতে সাধারণ
+# নিরপেক্ষ কার্ডের (২x৪=৮/পৃষ্ঠা) চেয়ে বড় জায়গা লাগে -- তাই আলাদা, বড় গ্রিড (২x২=৪/পৃষ্ঠা)
+CANDIDATE_COLS, CANDIDATE_ROWS = 2, 2
 MARGIN_MM = 10
 GAP_MM = 5
 ADDRESS_MAX_CHARS = 70
+LIGHT_GRAY = (235, 235, 235)
+MUTED_TEXT = (110, 100, 90)
 
 # একজন প্রার্থীর ব্র্যান্ডেড স্লিপে বাধ্যতামূলক এই সতর্কীকরণ লাইন -- এটা যাতে নির্বাচন কমিশনের
 # সরকারি নথি বলে ভুল বোঝাবুঝি না হয়, তার একটা সহজ প্রশমন
@@ -56,51 +62,23 @@ def _truncate(text: str, limit: int) -> str:
     return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
 
 
-def _draw_card(pdf: FPDF, x: float, y: float, w: float, h: float, voter: Voter, candidate: Candidate | None) -> None:
-    header_color = _hex_to_rgb(candidate.primary_color if candidate else None, GREEN)
-    accent_color = _hex_to_rgb(candidate.accent_color if candidate else None, RED)
-    header_h = 12 if candidate else 7
-
-    pdf.set_draw_color(*header_color)
+def _draw_card(pdf: FPDF, x: float, y: float, w: float, h: float, voter: Voter) -> None:
+    """নিরপেক্ষ (internal-staff) ভোটার কার্ড -- আগের মতোই অপরিবর্তিত, candidate ব্যাচে এটা আর
+    ব্যবহার হয় না (সেগুলোর জন্য নিচের _draw_candidate_slip, অনেক বেশি স্পষ্ট/বড় লেআউট)।"""
+    pdf.set_draw_color(*GREEN)
     pdf.set_line_width(0.4)
     pdf.rect(x, y, w, h)
 
-    pdf.set_fill_color(*header_color)
-    pdf.rect(x, y, w, header_h, style="F")
+    pdf.set_fill_color(*GREEN)
+    pdf.rect(x, y, w, 7, style="F")
+    pdf.set_xy(x + 2, y + 1)
     pdf.set_text_color(255, 255, 255)
-
-    if candidate:
-        text_x = x + 2
-        if candidate.symbol_image:
-            try:
-                pdf.image(io.BytesIO(candidate.symbol_image), x=x + 2, y=y + 1.2, h=header_h - 2.4)
-                text_x = x + 2 + (header_h - 2.4) + 1.5
-            except Exception:
-                pass
-        photo_w = 0.0
-        if candidate.photo_image:
-            try:
-                photo_w = header_h - 2.4
-                pdf.image(io.BytesIO(candidate.photo_image), x=x + w - 2 - photo_w, y=y + 1.2, h=photo_w)
-            except Exception:
-                photo_w = 0.0
-
-        text_w = w - (text_x - x) - photo_w - 3
-        pdf.set_xy(text_x, y + 1)
-        pdf.set_font("NotoBengali", "B", 8.5)
-        pdf.multi_cell(text_w, 3.6, _truncate(candidate.name, 30), new_x="LMARGIN", new_y="NEXT")
-        if candidate.slogan:
-            pdf.set_xy(text_x, y + 1 + 3.6)
-            pdf.set_font("NotoBengali", "", 7)
-            pdf.multi_cell(text_w, 3.4, _truncate(candidate.slogan, 40), new_x="LMARGIN", new_y="NEXT")
-    else:
-        pdf.set_xy(x + 2, y + 1)
-        pdf.set_font("NotoBengali", "B", 9)
-        pdf.cell(w - 4, 5, "ভোটার তালিকা অ্যাপ", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("NotoBengali", "B", 9)
+    pdf.cell(w - 4, 5, "ভোটার তালিকা অ্যাপ", new_x="LMARGIN", new_y="NEXT")
 
     pdf.set_text_color(*DARK_TEXT)
     line_h = 4.6
-    ty = y + header_h + 2
+    ty = y + 9
 
     pdf.set_font("NotoBengali", "B", 10)
     pdf.set_xy(x + 3, ty)
@@ -123,26 +101,163 @@ def _draw_card(pdf: FPDF, x: float, y: float, w: float, h: float, voter: Voter, 
     pdf.set_xy(x + 3, ty)
     pdf.multi_cell(w - 6, line_h, f"ঠিকানা: {_truncate(voter.address or '-', ADDRESS_MAX_CHARS)}")
 
-    if candidate:
-        pdf.set_font("NotoBengali", "", 5.8)
-        pdf.set_text_color(90, 90, 90)
-        pdf.set_xy(x + 3, y + h - 5.5)
-        pdf.multi_cell(w - 6, 2.6, DISCLAIMER)
-        pdf.set_text_color(*DARK_TEXT)
+    pdf.set_draw_color(*RED)
+    pdf.set_line_width(0.8)
+    pdf.line(x, y + h - 1.5, x + w, y + h - 1.5)
 
-    pdf.set_draw_color(*accent_color)
+
+def _place_image_fit(pdf: FPDF, img_bytes: bytes, box_x: float, box_y: float, box_w: float, box_h: float) -> None:
+    """ছবিকে ফ্রেমের সাথে স্ট্রেচ না করে অনুপাত ঠিক রেখে ফ্রেমের ভেতর কেন্দ্রে বসায় ("contain")
+    -- candidate-এর আপলোড করা ছবি/প্রতীক যেকোনো অনুপাতের হতে পারে, সরাসরি w+h দিয়ে আঁকলে
+    সেটা বেঁকে/চ্যাপ্টা দেখাত।"""
+    try:
+        with PILImage.open(io.BytesIO(img_bytes)) as im:
+            iw, ih = im.size
+        if not iw or not ih:
+            return
+        scale = min(box_w / iw, box_h / ih)
+        draw_w, draw_h = iw * scale, ih * scale
+        draw_x = box_x + (box_w - draw_w) / 2
+        draw_y = box_y + (box_h - draw_h) / 2
+        pdf.image(io.BytesIO(img_bytes), x=draw_x, y=draw_y, w=draw_w, h=draw_h)
+    except Exception:
+        pass
+
+
+def _centered_text(pdf: FPDF, x: float, y: float, w: float, text: str) -> None:
+    pdf.set_xy(x, y)
+    pdf.cell(w, 5, text, align="C", new_x="LMARGIN", new_y="NEXT")
+
+
+def _label_value_row(pdf: FPDF, x: float, y: float, w: float, label: str, value: str, label_w: float = 24) -> None:
+    pdf.set_font("NotoBengali", "B", 9)
+    pdf.set_xy(x, y)
+    pdf.cell(label_w, 5.5, label, new_x="RIGHT", new_y="TOP")
+    pdf.set_font("NotoBengali", "", 9)
+    pdf.set_xy(x + label_w, y)
+    pdf.cell(w - label_w, 5.5, value, new_x="LMARGIN", new_y="NEXT")
+
+
+def _draw_candidate_slip(pdf: FPDF, x: float, y: float, w: float, h: float, voter: Voter, candidate: Candidate) -> None:
+    """বাংলাদেশের বাস্তব নির্বাচনী ভোটার স্লিপের মতো লেআউট: উপরে প্রার্থীর আসন/প্রতীক/ছবি/নাম/
+    স্লোগান স্পষ্টভাবে, একটা পুরু বিভাজক রেখা, তারপর ভোটারের তথ্য লেবেল-ভ্যালু আকারে সাজানো --
+    আগের কমপ্যাক্ট ৮-প্রতি-পৃষ্ঠা ডিজাইনের তুলনায় অনেক বড় (২x২/পৃষ্ঠা) যাতে সবকিছু সহজে পড়া যায়।"""
+    primary = _hex_to_rgb(candidate.primary_color, GREEN)
+    accent = _hex_to_rgb(candidate.accent_color, RED)
+
+    pdf.set_draw_color(*primary)
+    pdf.set_line_width(0.5)
+    pdf.rect(x, y, w, h)
+
+    pad = 4
+    inner_w = w - 2 * pad
+    ty = y + 3
+
+    # নির্বাচনী এলাকা/আসন (থাকলে)
+    if candidate.constituency_label:
+        pdf.set_text_color(*DARK_TEXT)
+        pdf.set_font("NotoBengali", "B", 11)
+        _centered_text(pdf, x + pad, ty, inner_w, _truncate(candidate.constituency_label, 34))
+        ty += 6.5
+
+    # ছবি (বামে) + প্রতীক (ডানে), দুটোই নির্দিষ্ট মাপের ফ্রেমে -- ছবি না থাকলে ফাঁকা ফ্রেম + লেবেল
+    photo_w, photo_h = inner_w * 0.44, 40.0
+    symbol_w, symbol_h = inner_w * 0.44, 36.0
+    photo_x, photo_y = x + pad, ty
+    symbol_x, symbol_y = x + w - pad - symbol_w, ty + 2
+
+    pdf.set_draw_color(*LIGHT_GRAY)
+    pdf.set_line_width(0.3)
+    pdf.rect(photo_x, photo_y, photo_w, photo_h)
+    if candidate.photo_image:
+        _place_image_fit(pdf, candidate.photo_image, photo_x, photo_y, photo_w, photo_h)
+    pdf.rect(symbol_x, symbol_y, symbol_w, symbol_h)
+    if candidate.symbol_image:
+        _place_image_fit(pdf, candidate.symbol_image, symbol_x, symbol_y, symbol_w, symbol_h)
+    if candidate.symbol_name:
+        pdf.set_font("NotoBengali", "", 8)
+        pdf.set_text_color(*MUTED_TEXT)
+        _centered_text(pdf, symbol_x, symbol_y + symbol_h + 1, symbol_w, _truncate(candidate.symbol_name, 16))
+
+    ty += max(photo_h, symbol_h + 2) + 3
+
+    # প্রার্থীর নাম -- রঙিন ব্যাজ-বার, সাদা বোল্ড টেক্সট (ভোটার-নাম বারের থেকে আলাদা করতে)
+    pdf.set_fill_color(*primary)
+    pdf.rect(x + pad, ty, inner_w, 8, style="F")
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("NotoBengali", "B", 11)
+    _centered_text(pdf, x + pad, ty + 1.5, inner_w, _truncate(candidate.name, 30))
+    ty += 10
+
+    # স্লোগান: নিজেরটা থাকলে সেটা, নাহলে প্রতীকের নাম দিয়ে একটা সাধারণ "---মার্কায় ভোট দিন" লাইন
+    slogan = candidate.slogan or (f"{candidate.symbol_name} মার্কায় ভোট দিন" if candidate.symbol_name else None)
+    if slogan:
+        pdf.set_text_color(*accent)
+        pdf.set_font("NotoBengali", "B", 9.5)
+        _centered_text(pdf, x + pad, ty, inner_w, _truncate(slogan, 42))
+        ty += 6.5
+
+    ty += 1.5
+
+    # পুরু বিভাজক -- হেডার (প্রার্থী) বনাম ভোটার-তথ্য জোনকে স্পষ্টভাবে আলাদা করে
+    pdf.set_draw_color(*primary)
+    pdf.set_line_width(0.8)
+    pdf.line(x + pad, ty, x + w - pad, ty)
+    ty += 4
+
+    pdf.set_text_color(*DARK_TEXT)
+    pdf.set_font("NotoBengali", "B", 11)
+    pdf.set_xy(x + pad, ty)
+    pdf.cell(inner_w, 6, _truncate(voter.name or "নাম নেই", 30), new_x="LMARGIN", new_y="NEXT")
+    ty += 7
+
+    # voter_no/dob-এর মতো লম্বা মান দুই-কলাম সারিতে দিলে পাশের লেবেলের উপর উপচে পড়ে (fpdf2 cell
+    # ক্লিপ/wrap করে না) -- তাই শুধু নিশ্চিতভাবে ছোট মান (ক্রমিক নং/লিঙ্গ) জোড়ায়, বাকি সব পূর্ণ-প্রস্থ
+    half_w = inner_w / 2
+    _label_value_row(pdf, x + pad, ty, inner_w, "ভোটার নং:", voter.voter_no or "-", label_w=24)
+    ty += 5.8
+    _label_value_row(pdf, x + pad, ty, inner_w, "পিতার নাম:", _truncate(voter.father_name or "-", 36), label_w=24)
+    ty += 5.8
+    _label_value_row(pdf, x + pad, ty, inner_w, "মাতার নাম:", _truncate(voter.mother_name or "-", 36), label_w=24)
+    ty += 5.8
+    _label_value_row(pdf, x + pad, ty, inner_w, "জন্ম তারিখ:", voter.dob or "-", label_w=24)
+    ty += 5.8
+    _label_value_row(pdf, x + pad, ty, half_w, "ক্রমিক নং:", voter.serial_no or "-", label_w=24)
+    _label_value_row(pdf, x + pad + half_w, ty, half_w, "লিঙ্গ:", voter.gender or "-", label_w=18)
+    ty += 5.8
+    center_label = voter.ward or voter.area_name or "-"
+    _label_value_row(pdf, x + pad, ty, inner_w, "কেন্দ্র/ওয়ার্ড:", _truncate(center_label, 36), label_w=24)
+    ty += 5.8
+    pdf.set_font("NotoBengali", "B", 9)
+    pdf.set_xy(x + pad, ty)
+    pdf.cell(24, 5.5, "ঠিকানা:", new_x="RIGHT", new_y="TOP")
+    pdf.set_font("NotoBengali", "", 9)
+    pdf.set_xy(x + pad + 24, ty)
+    pdf.multi_cell(inner_w - 24, 5, _truncate(voter.address or "-", ADDRESS_MAX_CHARS))
+
+    pdf.set_font("NotoBengali", "", 5.8)
+    pdf.set_text_color(*MUTED_TEXT)
+    pdf.set_xy(x + pad, y + h - 5.5)
+    pdf.multi_cell(inner_w, 2.6, DISCLAIMER)
+
+    pdf.set_draw_color(*accent)
     pdf.set_line_width(0.8)
     pdf.line(x, y + h - 1.2, x + w, y + h - 1.2)
 
 
 def build_batch_pdf(voters: list[Voter], candidate: Candidate | None = None) -> bytes:
-    """একটা প্রিন্ট-ব্যাচের সব ভোটারের কার্ড ধারণকারী PDF বানায় -- A4 পৃষ্ঠায় ৮টা কার্ড
-    (২ কলাম x ৪ সারি)। কোনো ভোটার না থাকলেও অন্তত একটা ফাঁকা-বার্তা পৃষ্ঠা ফেরত দেয়।
+    """একটা প্রিন্ট-ব্যাচের সব ভোটারের স্লিপ ধারণকারী PDF বানায়। কোনো ভোটার না থাকলেও অন্তত
+    একটা ফাঁকা-বার্তা পৃষ্ঠা ফেরত দেয়।
 
-    candidate দেওয়া থাকলে (candidate/candidate_agent-এর তৈরি ব্যাচ) হেডারে তার প্রতীক/ছবি/
-    স্লোগান/রঙ এবং একটা সতর্কীকরণ লাইন দেখানো হয় -- না দিলে (internal-staff ব্যাচ) আগের মতোই
-    নিরপেক্ষ সবুজ/লাল ডিজাইন অপরিবর্তিত থাকে।"""
+    candidate দেওয়া থাকলে (candidate/candidate_agent-এর তৈরি ব্যাচ) বাস্তব বাংলাদেশি নির্বাচনী
+    ভোটার স্লিপের মতো বড়, স্পষ্ট লেআউটে (২x২=৪/পৃষ্ঠা) প্রতীক/ছবি/নাম/স্লোগান দেখানো হয় --
+    না দিলে (internal-staff ব্যাচ) আগের কমপ্যাক্ট নিরপেক্ষ ডিজাইন (২x৪=৮/পৃষ্ঠা) অপরিবর্তিত থাকে।"""
     pdf = FPDF(format="A4", unit="mm")
+    # পৃষ্ঠাব্যবস্থা এখানে ম্যানুয়ালি (per_page হিসেব করে pdf.add_page()) করা হয় -- fpdf2-এর
+    # ডিফল্ট auto-page-break চালু থাকলে একটা কার্ডের মাঝে (যেমন ঠিকানা multi_cell আঁকার সময়)
+    # পৃষ্ঠার নিচের margin ছুঁয়ে ফেললে চুপচাপ একটা নতুন পৃষ্ঠা শুরু করে দেয় -- তখন সেই কার্ডের
+    # বাকি অংশ (ফুটার/ডিসক্লেইমার/অ্যাকসেন্ট রেখা) পুরনো পৃষ্ঠায় আর আঁকা হয় না, উধাও হয়ে যায়
+    pdf.set_auto_page_break(False)
     _register_fonts(pdf)
 
     if not voters:
@@ -151,20 +266,24 @@ def build_batch_pdf(voters: list[Voter], candidate: Candidate | None = None) -> 
         pdf.cell(0, 10, "এই ব্যাচে কোনো ভোটার নেই")
         return bytes(pdf.output())
 
+    cols, rows = (CANDIDATE_COLS, CANDIDATE_ROWS) if candidate else (CARD_COLS, CARD_ROWS)
     page_w, page_h = 210, 297
     usable_w = page_w - 2 * MARGIN_MM
     usable_h = page_h - 2 * MARGIN_MM
-    card_w = (usable_w - (CARD_COLS - 1) * GAP_MM) / CARD_COLS
-    card_h = (usable_h - (CARD_ROWS - 1) * GAP_MM) / CARD_ROWS
-    per_page = CARD_COLS * CARD_ROWS
+    card_w = (usable_w - (cols - 1) * GAP_MM) / cols
+    card_h = (usable_h - (rows - 1) * GAP_MM) / rows
+    per_page = cols * rows
 
     for i, voter in enumerate(voters):
         pos = i % per_page
         if pos == 0:
             pdf.add_page()
-        row, col = divmod(pos, CARD_COLS)
+        row, col = divmod(pos, cols)
         x = MARGIN_MM + col * (card_w + GAP_MM)
         y = MARGIN_MM + row * (card_h + GAP_MM)
-        _draw_card(pdf, x, y, card_w, card_h, voter, candidate)
+        if candidate:
+            _draw_candidate_slip(pdf, x, y, card_w, card_h, voter, candidate)
+        else:
+            _draw_card(pdf, x, y, card_w, card_h, voter)
 
     return bytes(pdf.output())

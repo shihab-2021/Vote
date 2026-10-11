@@ -17,6 +17,7 @@ router = APIRouter(prefix="/api/users", tags=["users"])
 roles_router = APIRouter(prefix="/api/roles", tags=["users"])
 
 CANDIDATE_AGENT_ROLE_KEY = "candidate_agent"
+CANDIDATE_LINKED_ROLE_KEYS = {"candidate", "candidate_agent"}
 
 
 def _is_candidate_actor(actor: User, db: Session) -> bool:
@@ -77,10 +78,18 @@ def create_user(
         candidate_id = actor.candidate_id
         _validate_scope_subset(payload.area_scopes, actor, db)
     else:
-        if role_id is None or not db.get(Role, role_id):
+        role = db.get(Role, role_id) if role_id is not None else None
+        if not role:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "রোল পাওয়া যায়নি")
-        if candidate_id is not None and not db.get(Candidate, candidate_id):
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, "প্রার্থী পাওয়া যায়নি")
+        if role.key in CANDIDATE_LINKED_ROLE_KEYS:
+            # candidate_id ছাড়া candidate/candidate_agent ইউজার তৈরি হতে দেওয়া হতো আগে -- তখন
+            # তার তৈরি প্রিন্ট-ব্যাচ কখনো ব্র্যান্ডিং পেত না (candidate_id তৈরির সময় snapshot হয়)
+            if candidate_id is None:
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, "এই রোলের জন্য একটা প্রার্থী বাছাই করতে হবে")
+            if not db.get(Candidate, candidate_id):
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, "প্রার্থী পাওয়া যায়নি")
+        elif candidate_id is not None:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "এই রোলের জন্য প্রার্থী প্রযোজ্য নয়")
 
     user = User(
         username=payload.username,
@@ -144,6 +153,16 @@ def update_user(
         db.execute(delete(UserAreaScope).where(UserAreaScope.user_id == user.id))
         for s in payload.area_scopes:
             db.add(UserAreaScope(user_id=user.id, scope_field=s.scope_field, scope_value=s.scope_value))
+
+    # role_id/candidate_id আলাদা আলাদাভাবে আপডেট হলেও শেষে এই নিয়মটা ভাঙা থাকা চলবে না --
+    # candidate/candidate_agent-এর candidate_id অবশ্যই থাকতে হবে (নাহলে তার তৈরি প্রিন্ট-ব্যাচ
+    # কখনো ব্র্যান্ডিং পাবে না, candidate_id তৈরির সময় snapshot হয়), অন্য রোলের candidate_id
+    # থাকা চলবে না
+    if not is_candidate_actor and ("role_id" in payload.model_fields_set or "candidate_id" in payload.model_fields_set):
+        if user.role.key in CANDIDATE_LINKED_ROLE_KEYS and user.candidate_id is None:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "এই রোলের জন্য একটা প্রার্থী বাছাই করতে হবে")
+        if user.role.key not in CANDIDATE_LINKED_ROLE_KEYS and user.candidate_id is not None:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "এই রোলের জন্য প্রার্থী প্রযোজ্য নয়")
 
     log_activity(db, actor, "user_update", detail={"user_id": user.id, **changes}, request=request)
     db.commit()

@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     admin_bootstrap_username: str = "admin"
     admin_bootstrap_password: str = "change-me-immediately"
     convert_output_dir: str = "~/Desktop"  # PDF কনভার্সনের Excel ব্যাকআপ এখানে সেভ হয়
+    cors_origins: str = ""  # কমা-সেপারেটেড অতিরিক্ত origins (যেমন: https://my-custom-domain.com)
 
 
 settings = Settings()
