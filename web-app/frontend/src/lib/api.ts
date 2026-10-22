@@ -269,6 +269,49 @@ export interface ActivityLogResponse {
   page_size: number;
 }
 
+export interface LocationOptionsResponse {
+  districts: string[];
+  municipalities: string[];
+  upazilas: string[];
+  unions: string[];
+  wards: string[];
+}
+
+export interface AddressVoterStats {
+  address: string;
+  male_count: number;
+  female_count: number;
+  total_count: number;
+}
+
+export interface WardReport {
+  ward: string;
+  addresses: AddressVoterStats[];
+  male_subtotal: number;
+  female_subtotal: number;
+  total_subtotal: number;
+}
+
+export interface AreaReportSummary {
+  total_male: number;
+  total_female: number;
+  total_voters: number;
+}
+
+export interface VoterReportResponse {
+  selected_area: {
+    district: string | null;
+    municipality: string | null;
+    upazila: string | null;
+    union_name: string | null;
+    ward: string | null;
+  };
+  area_heading: string;
+  summary: AreaReportSummary;
+  wards: WardReport[];
+  grand_total: AreaReportSummary;
+}
+
 export const VOTER_LABELS: Record<string, string> = {
   serial_no: "ক্রমিক নং",
   name: "নাম",

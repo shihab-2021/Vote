@@ -11,7 +11,7 @@ from .config import settings
 from .db import SessionLocal
 from .models import Role, User
 from .routers import (
-    activity_logs, auth, candidates, convert, export, fields, imports, print_batches, public, stats, users, voters,
+    activity_logs, auth, candidates, convert, export, fields, imports, print_batches, public, reports, stats, users, voters,
 )
 
 app = FastAPI(title="ভোটার তালিকা অ্যাপ (হোস্টেড)")
@@ -28,6 +28,7 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(voters.router)
+app.include_router(reports.router)
 app.include_router(fields.router)
 app.include_router(imports.router)
 app.include_router(export.router)

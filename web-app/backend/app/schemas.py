@@ -212,3 +212,40 @@ class StatsSummary(BaseModel):
     by_ward: dict[str, int]
     by_upazila: dict[str, int]
     by_gender: dict[str, int]
+
+
+class LocationOptionsResponse(BaseModel):
+    districts: list[str]
+    municipalities: list[str]
+    upazilas: list[str]
+    unions: list[str]
+    wards: list[str]
+
+
+class AddressVoterStats(BaseModel):
+    address: str
+    male_count: int
+    female_count: int
+    total_count: int
+
+
+class WardReport(BaseModel):
+    ward: str
+    addresses: list[AddressVoterStats]
+    male_subtotal: int
+    female_subtotal: int
+    total_subtotal: int
+
+
+class AreaReportSummary(BaseModel):
+    total_male: int
+    total_female: int
+    total_voters: int
+
+
+class VoterReportResponse(BaseModel):
+    selected_area: dict[str, str | None]
+    area_heading: str
+    summary: AreaReportSummary
+    wards: list[WardReport]
+    grand_total: AreaReportSummary

@@ -5,6 +5,7 @@ import { AppShell } from "@/components/AppShell";
 import { LoginPage } from "@/pages/LoginPage";
 import { LandingPage } from "@/pages/LandingPage";
 import { DashboardPage } from "@/pages/DashboardPage";
+import { VoterReportPage } from "@/pages/VoterReportPage";
 import { VotersPage } from "@/pages/VotersPage";
 import { QuickSearchPage } from "@/pages/QuickSearchPage";
 import { ConvertPage } from "@/pages/ConvertPage";
@@ -48,6 +49,8 @@ export default function App() {
             <Route element={<AppShell />}>
               <Route element={<ProtectedRoute permission="view_reports" />}>
                 <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/reports" element={<VoterReportPage />} />
+                <Route path="/voter-report" element={<Navigate to="/reports" replace />} />
               </Route>
               <Route element={<ProtectedRoute permission="view_voter" />}>
                 <Route path="/voters" element={<VotersPage />} />

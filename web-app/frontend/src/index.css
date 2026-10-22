@@ -181,21 +181,102 @@
     border: 0;
   }
 
-  /* পুরনো কাগজের মৃদু দানাদার টেক্সচার (SVG fractal noise, কোনো ইমেজ ফাইল/লাইসেন্স ছাড়াই) --
-     পাবলিক পেজের (Landing/Login/CitizenFind) হিরো/কার্ডে ব্যবহারের জন্য, খুবই হালকা opacity-তে
-     যাতে টেক্সট পড়তে কোনো সমস্যা না হয় */
-  .paper-texture {
-    background-color: var(--paper);
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
+  /* পুরনো কাগজের মৃদু দানাদার টেক্সচার (SVG fractal noise, কোনো ইমেজ ফাইল/লা/* প্রিন্ট স্টাইল -- সরকারি খতিয়ান ও অফিসিয়াল ভোটার তালিকা রিপোর্টের জন্য পরিচ্ছন্ন প্রিন্টিং সিস্টেম */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm 10mm 12mm 10mm;
   }
 
-  /* .paper-texture-এর মতোই দানা, কিন্তু নিজের background-color চাপায় না -- যেখানে ইতিমধ্যে
-     একটা রঙিন পৃষ্ঠতল (যেমন সাইডবার) আছে তার উপর শুধু টেক্সচার বসানোর জন্য */
-  .grain-overlay {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
+  /* ওয়েব শেল, সাইডবার, নেভিগেশন, ফিল্টার কার্ড ও বাটনসমূহ প্রিন্টে সম্পূর্ণ লুকানো */
+  [data-sidebar],
+  header,
+  nav,
+  .no-print,
+  button:not(.allow-print) {
+    display: none !important;
   }
 
-  /* প্রাইমারি CTA বাটনে চাপ দিলে রাবার-স্ট্যাম্প বসানোর মতো একটা স্পর্শযোগ্য অনুভূতি */
+  body, html {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 9.5pt !important;
+    line-height: 1.35 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  main#main-content {
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    background-image: none !important;
+    min-height: auto !important;
+    max-width: 100% !important;
+  }
+
+  /* পেজ ব্রেক কন্ট্রোল */
+  .print-avoid-break {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .print-break-before {
+    break-before: page !important;
+    page-break-before: always !important;
+  }
+
+  .print-header-repeat {
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+  }
+
+  /* টেবিল হেডার প্রতি পৃষ্ঠায় পুনরাবৃত্তি */
+  thead {
+    display: table-header-group !important;
+  }
+
+  tfoot {
+    display: table-footer-group !important;
+  }
+
+  tr {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* অফিসিয়াল খতিয়ান টেবিল বর্ডার ও স্পেসিং */
+  .printable-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  .printable-table th,
+  .printable-table td {
+    border: 1px solid #222222 !important;
+    padding: 3.5px 6px !important;
+    font-size: 9pt !important;
+    color: #000000 !important;
+  }
+
+  .printable-table th {
+    background-color: #f0f0f0 !important;
+    font-weight: 700 !important;
+    text-align: inherit;
+  }
+
+  .printable-table tr.subtotal-row {
+    background-color: #f5f5f5 !important;
+    font-weight: 700 !important;
+  }
+
+  .printable-table tr.subtotal-row td {
+    border-top: 1.5px solid #000000 !important;
+    border-bottom: 2.5px double #000000 !important;
+  }
+}
+�াবার-স্ট্যাম্প বসানোর মতো একটা স্পর্শযোগ্য অনুভূতি */
   .stamp-press {
     transition: transform 150ms ease, opacity 150ms ease;
   }
@@ -224,3 +305,62 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* প্রিন্ট স্টাইল -- রিপোর্ট প্রিন্ট করার সময় পরিচ্ছন্ন সাদা-কালো বিন্যাস */
+@media print {
+  [data-sidebar],
+  header,
+  nav,
+  .no-print,
+  button:not(.allow-print) {
+    display: none !important;
+  }
+  body, html {
+    background: #ffffff !important;
+    color: #111111 !important;
+    font-size: 10.5pt !important;
+  }
+  main#main-content {
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    background-image: none !important;
+    min-height: auto !important;
+  }
+  .print-avoid-break {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+  .print-page-break {
+    break-before: page !important;
+    page-break-before: always !important;
+  }
+  thead {
+    display: table-header-group !important;
+  }
+  tfoot {
+    display: table-footer-group !important;
+  }
+  tr {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+  .printable-table th,
+  .printable-table td {
+    border: 1px solid #333333 !important;
+    padding: 5px 8px !important;
+    color: #000000 !important;
+  }
+  .printable-table th {
+    background-color: #f0f0f0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .printable-table tr.subtotal-row {
+    background-color: #f7f7f7 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    font-weight: bold !important;
+  }
+}

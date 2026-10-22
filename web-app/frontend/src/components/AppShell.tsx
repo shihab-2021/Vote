@@ -1,7 +1,7 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, Upload, ListPlus, LogOut, Vote, FileScan, Search, UserCog, Printer, ScrollText,
-  Award, Megaphone, Users2,
+  Award, Megaphone, Users2, FileSpreadsheet,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
@@ -28,6 +28,7 @@ const NAV: NavItem[] = [
   { to: "/dashboard", label: "ড্যাশবোর্ড", icon: LayoutDashboard, end: true, permission: "view_reports" },
   { to: "/search", label: "কুইক সার্চ", icon: Search, permission: "view_voter" },
   { to: "/voters", label: "ভোটার তালিকা", icon: Users, permission: "view_voter" },
+  { to: "/reports", label: "ভোটার রিপোর্ট", icon: FileSpreadsheet, permission: "view_reports" },
   { to: "/print", label: "প্রিন্ট ও বিতরণ", icon: Printer, permission: "print_voter" },
   { to: "/my-campaign", label: "আমার প্রচারণা", icon: Megaphone, permission: "manage_own_template", requiresCandidate: true },
   { to: "/my-agents", label: "আমার এজেন্ট", icon: Users2, permission: "manage_own_agents", requiresCandidate: true },
